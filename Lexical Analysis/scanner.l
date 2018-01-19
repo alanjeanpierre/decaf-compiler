@@ -55,11 +55,72 @@ static void DoBeforeEachAction();
   * entries in the Rules section later. 
   */
 
+DIGIT [0-9]
+ALPHA [a-zA-Z]
+APLHANUM  [a-zA-Z0-9]
+
 
 %%             /* BEGIN RULES SECTION */
  /* All patterns and actions should be placed between the start and stop
   * %% markers which delimit the Rules section. 
   */ 
+  
+  /* Keywords */
+void {printf("Found void keyword: %s\n", yytext);}
+string {printf("Found string keyword: %s\n", yytext);}
+this {printf("Found this keyword: %s\n", yytext);}
+while {printf("found while keyword: %s\n", yytext);}
+break {printf("Found break keyword: %s\n", yytext);}
+int { printf("Found int keyword: %s\n", yytext); }
+class { printf("Found class keyword: %s\n", yytext);}
+extends { printf("Found extends keyword: %s\n", yytext);}
+if { printf("Found if keyword: %s\n", yytext);}
+New {printf("Found new keyword: %s\n", yytext);}
+double {printf("Found double keyword: %s\n", yytext);}
+interface {printf("Found interface keyword: %s\n", yytext);}
+implements {printf("Found implements keyword: %s\n", yytext);}
+else {printf("Found else keyword: %s\n", yytext);}
+NewArray {printf("Found NewArray keyword: %s\n", yytext);}
+bool {printf("Found bool keyword: %s\n", yytext);}
+null {printf("Found null keyword: %s\n", yytext);}
+for {printf("Found for keyword: %s\n", yytext);}
+return {printf("Found return keyword: %s\n", yytext);}
+
+ /* operators */
+"+" {printf("Found + operator: %s\n", yytext);}
+"-" {printf("Found - operator: %s\n", yytext);}
+"*" {printf("Found * operator: %s\n", yytext);}
+"/" {printf("Found / operator: %s\n", yytext);}
+"%" {printf("Found %% operator: %s\n", yytext);}
+"<" {printf("Found < operator: %s\n", yytext);}
+"<=" {printf("Found <= operator: %s\n", yytext);}
+">" {printf("Found > operator: %s\n", yytext);}
+">=" {printf("Found >= operator: %s\n", yytext);}
+"=" {printf("Found = operator: %s\n", yytext);}
+"==" {printf("Found == operator: %s\n", yytext);}
+"!=" {printf("Found != operator: %s\n", yytext);}
+"&&" {printf("Found && operator: %s\n", yytext);}
+"||" {printf("Found || operator: %s\n", yytext);}
+"!" {printf("Found ! operator: %s\n", yytext);}
+";" {printf("Found ; operator: %s\n", yytext);}
+"," {printf("Found , operator: %s\n", yytext);}
+"." {printf("Found . operator: %s\n", yytext);}
+"[" {printf("Found [ operator: %s\n", yytext);}
+"]" {printf("Found ] operator: %s\n", yytext);}
+"(" {printf("Found ( operator: %s\n", yytext);}
+")" {printf("Found ) operator: %s\n", yytext);}
+"{" {printf("Found { operator: %s\n", yytext);}
+"}" {printf("Found } operator: %s\n", yytext);}
+ /* numerics */  
+{DIGIT}+  { printf("Found an int: %s (%d)\n", yytext, atoi(yytext));}
+0[xX][0-9a-fA-F]+ {printf("found some hex: %s\n", yytext);}
+{DIGIT}+.{DIGIT}* {printf("found a float: %s (%f)\n", yytext, atof(yytext));}
+{DIGIT}+.{DIGIT}*E[+\-]{DIGIT}+ {printf("found an exponent: %s\n", yytext);}
+
+{ALPHA}+ {printf("Found an identifier: %s\n", yytext);}
+
+[ \t\n]+ /* do nothing */ ;
+  
 
 %%
 /* The closing %% above marks the end of the Rules section and the beginning
