@@ -33,6 +33,7 @@ YYSTYPE yylval;  // manually declared for pp1, later Yacc provides
  */
 struct yyltype yylloc; // manually dclared for pp1, later Yacc provides
 
+
 /* Macro: YY_USER_ACTION 
  * ---------------------
  * This flex built-in macro can be defined to provide an action which is
@@ -71,32 +72,26 @@ APLHANUM  [a-zA-Z0-9]
   *** Data Types ***
   ***********************************/
 void        {
-                printf("Found void keyword: %s\n", yytext); 
                 return T_Void;
             }
             
 int         {
-                printf("Found int keyword: %s\n", yytext); 
                 return T_Int;
             }
             
 double      {
-                printf("Found double keyword: %s\n", yytext); 
                 return T_Double;
             }
             
 bool        {
-                printf("Found bool keyword: %s\n", yytext); 
                 return T_Bool;
             }
             
 null        {   
-                printf("Found null keyword: %s\n", yytext); 
                 return T_Null;
             }
             
 string      {
-                printf("Found string keyword: %s\n", yytext); 
                 return T_String;
             }
 
@@ -106,32 +101,26 @@ string      {
   *** Control Flow ***
   ***********************************/
 if          {
-                printf("Found if keyword: %s\n", yytext); 
                 return T_If;
             }
             
 else        {
-                printf("Found else keyword: %s\n", yytext); 
                 return T_Else;
             }
             
 while       {
-                printf("found while keyword: %s\n", yytext); 
                 return T_While;
             }
             
 for         {
-                printf("Found for keyword: %s\n", yytext); 
                 return T_For;
             }
             
 return      {   
-                printf("Found return keyword: %s\n", yytext); 
                 return T_Return;
             }            
             
 break       {
-                printf("Found break keyword: %s\n", yytext); 
                 return T_Break;
             }
 
@@ -142,37 +131,31 @@ break       {
   ***********************************/
               
 New         {
-                printf("Found new keyword: %s\n", yytext); 
                 return T_New;
             }
+            
 NewArray    {
-                printf("Found NewArray keyword: %s\n", yytext); 
                 return T_NewArray;
             }
             
 class       {
-                printf("Found class keyword: %s\n", yytext);
                 return T_Class;
             }
             
 extends     {
-                printf("Found extends keyword: %s\n", yytext); 
                 return T_Extends;
             }
             
 this        {
-                printf("Found this keyword: %s\n", yytext); 
                 return T_This;
             }
 
             
 interface   {
-                printf("Found interface keyword: %s\n", yytext); 
                 return T_Interface;
             }
             
 implements  {
-                printf("Found implements keyword: %s\n", yytext); 
                 return T_Implements;
             }
             
@@ -180,153 +163,137 @@ implements  {
 
  /* operators */
 "+"         {
-                printf("Found + operator: %s\n", yytext);
                 return '+';
             }
             
 "-"         {
-                printf("Found - operator: %s\n", yytext);
                 return '-';
             }
             
 "*"         {   
-                printf("Found * operator: %s\n", yytext);
                 return '*';
             }
             
 "/"         {
-                printf("Found / operator: %s\n", yytext);
                 return '/';
             }
             
 "%"         {   
-                printf("Found %% operator: %s\n", yytext);
                 return '%';
             }
             
 "<"         {
-                printf("Found < operator: %s\n", yytext);
                 return '%';
             }
             
 "<="        {
-                printf("Found <= operator: %s\n", yytext);
                 return T_LessEqual;
             }
             
 ">"         {
-                printf("Found > operator: %s\n", yytext);
                 return '>';
             }
             
 ">="        {
-                printf("Found >= operator: %s\n", yytext);
                 return T_GreaterEqual;
             }
             
 "="         {
-                printf("Found = operator: %s\n", yytext);
                 return '=';
             }
             
 "=="        {   
-                printf("Found == operator: %s\n", yytext);
                 return T_Equal;
             }
             
 "!="        {
-                printf("Found != operator: %s\n", yytext);
                 return T_NotEqual;
             }
             
 "&&"        {
-                printf("Found && operator: %s\n", yytext);
                 return T_And;
             }
             
 "||"        {
-                printf("Found || operator: %s\n", yytext);
                 return T_Or;
             }
             
 "!"         {
-                printf("Found ! operator: %s\n", yytext);
                 return '!';
             }
             
 ";"         {   
-                printf("Found ; operator: %s\n", yytext);
                 return ';';
             }
             
 ","         {
-                printf("Found , operator: %s\n", yytext);
                 return ',';
             }
             
 "."         {
-                printf("Found . operator: %s\n", yytext);
                 return '.';
             }
             
 "["         {
-                printf("Found [ operator: %s\n", yytext);
                 return '[';
             }
             
 "]"         {
-                printf("Found ] operator: %s\n", yytext);
                 return ']';
             }
             
 "("         {
-                printf("Found ( operator: %s\n", yytext);
                 return '(';
             }
             
 ")"         {
-                printf("Found ) operator: %s\n", yytext);
                 return ')';
             }
             
 "{"         {
-                printf("Found { operator: %s\n", yytext);
                 return '{';
             }
             
 "}"         {
-                printf("Found } operator: %s\n", yytext);
                 return '}';
             }
+
+ /* Boolean */
+ 
+true        {
+                yylval.boolConstant = true;
+                return T_BoolConstant;
+            }
+
+false       {
+                yylval.boolConstant = false;
+                return T_BoolConstant;
+            }
+
             
  /* Integer */  
 {DIGIT}+    {
-                printf("Found an int: %s (%d)\n", yytext, atoi(yytext));
                 yylval.integerConstant = atoi(yytext);
                 return T_IntConstant;
             }
             
     /* Hexadecimal */
 0[xX][0-9a-fA-F]+   {
-                printf("found some hex: %s\n", yytext);
                 yylval.integerConstant = 0;
                 return T_IntConstant;
             }
     /* Floataing point */
-{DIGIT}+.{DIGIT}*   {
-                printf("found a float: %s (%f)\n", yytext, atof(yytext));
+{DIGIT}+\.{DIGIT}*   {
                 yylval.doubleConstant = atof(yytext);
                 return T_DoubleConstant;
             }
     /* Exponent float */
-{DIGIT}+.{DIGIT}*E[+\-]{DIGIT}+     {
-                printf("found an exponent: %s\n", yytext);
+{DIGIT}+\.{DIGIT}*E[+\-]{DIGIT}+     {
                 yylval.doubleConstant = 0;
                 return T_DoubleConstant;
             }
     /* Identifier */
 {ALPHA}+    {
-                printf("Found an identifier: %s\n", yytext);
                 strncpy(yylval.identifier, yytext, 31);
                 return T_Identifier;
             }
@@ -369,6 +336,9 @@ void InitScanner()
 {
     PrintDebug("lex", "Initializing scanner");
     yy_flex_debug = false;
+    yylloc.first_line = 1;
+    //yylloc.first_column = 1;
+    //yylloc.last_column = 1;
 }
 
 
@@ -379,6 +349,7 @@ void InitScanner()
  */
 static void DoBeforeEachAction()
 {
-    yylloc.first_column = yylloc.last_column;
+    //printf("Found something: %s\n", yytext);
+    yylloc.first_column = yylloc.last_column + 1;
     yylloc.last_column += strlen(yytext);
 }
