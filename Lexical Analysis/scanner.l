@@ -292,6 +292,14 @@ false       {
                 yylval.doubleConstant = 0;
                 return T_DoubleConstant;
             }
+            
+    /* String literal */
+
+\"[^"\n]*\" {
+                yylval.stringConstant = yytext;
+                return T_StringConstant;
+            }
+
     /* Identifier */
 {ALPHA}+    {
                 strncpy(yylval.identifier, yytext, 31);
