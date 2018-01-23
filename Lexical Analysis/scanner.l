@@ -15,6 +15,7 @@
 #include "scanner.h"
 #include "utility.h" // for PrintDebug()
 #include "errors.h"
+#include <math.h>
 
 /* Global variable: yylval
  * -----------------------
@@ -46,6 +47,10 @@ struct yyltype yylloc; // manually dclared for pp1, later Yacc provides
  */
 static void DoBeforeEachAction(); 
 #define YY_USER_ACTION DoBeforeEachAction();
+int parse_hex(char *str);
+int hex2int(char c);
+int intpow(int base, int exponent);
+double parse_exponent(char *str);
 
 %}
 
@@ -58,7 +63,7 @@ static void DoBeforeEachAction();
 
 DIGIT [0-9]
 ALPHA [a-zA-Z]
-APLHANUM  [a-zA-Z0-9]
+ALPHANUM  [a-zA-Z0-9]
 
 
 %%             /* BEGIN RULES SECTION */
@@ -183,7 +188,7 @@ implements  {
             }
             
 "<"         {
-                return '%';
+                return '<';
             }
             
 "<="        {
@@ -279,7 +284,7 @@ false       {
             
     /* Hexadecimal */
 0[xX][0-9a-fA-F]+   {
-                yylval.integerConstant = 0;
+                yylval.integerConstant = parse_hex(yytext);
                 return T_IntConstant;
             }
     /* Floataing point */
@@ -289,7 +294,7 @@ false       {
             }
     /* Exponent float */
 {DIGIT}+\.{DIGIT}*E[+\-]{DIGIT}+     {
-                yylval.doubleConstant = 0;
+                yylval.doubleConstant = parse_exponent(yytext);
                 return T_DoubleConstant;
             }
             
@@ -299,9 +304,15 @@ false       {
                 yylval.stringConstant = yytext;
                 return T_StringConstant;
             }
-
+    /* missing terminator string literal */
+\"[^"\n]* {
+                ReportError::UntermString(&yylloc, yytext);
+            }
+    
     /* Identifier */
-{ALPHA}+    {
+({ALPHA}|_)({ALPHANUM}|_)*   {
+                if (strlen(yytext) > 31)
+                    ReportError::LongIdentifier(&yylloc, yytext);
                 strncpy(yylval.identifier, yytext, 31);
                 return T_Identifier;
             }
@@ -316,7 +327,8 @@ false       {
             }
 
 .           { 
-                printf("Invalid character: %s\n", yytext);
+                //printf("Invalid character: %s\n", yytext);
+                ReportError::UnrecogChar(&yylloc, yytext[0]);
             }
   
 
@@ -327,6 +339,77 @@ false       {
  * This section is where you put definitions of helper functions.
  */
 
+ /* Function: parse_hex
+  * -------------------
+  * This function reads a hex string and returns its int value
+  */
+int parse_hex(char *str) {
+    int length = strlen(str);
+    int num = 0;
+    for (int i = 0; i < length-2; i++) {
+        int digit = hex2int(str[length-i-1]);
+        num += digit * intpow(16, i);
+    }
+    return num;
+}
+
+/* Function: hex2int
+ * -----------------
+ * Maps hex characters to integers
+ */
+int hex2int(char c) {
+    switch (c) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            return c-'0';
+        case 'a':
+        case 'A':
+            return 10;
+        case 'b':
+        case 'B':
+            return 11;
+        case 'c':
+        case 'C':
+            return 12;
+        case 'd':
+        case 'D':
+            return 13;
+        case 'e':
+        case 'E':
+            return 14;
+        case 'f':
+        case 'F':
+            return 15;
+        default:
+            return 0;    
+    }
+}
+
+/* Function: intpow
+ * ----------------
+ * Returns integer exonentiation, rather than floating in math.h
+ */
+int intpow(int base, int exponent) {
+    if (exponent > 0)
+        return base * intpow(base, exponent-1);
+    return 1;
+}
+
+/* Function: parse_exponent
+ * ------------------------
+ * This function reads an exponent float and returns its FP value
+ */
+double parse_exponent(char *str) {
+    return atof(str);
+}
 
 /* Function: InitScanner
  * ---------------------
