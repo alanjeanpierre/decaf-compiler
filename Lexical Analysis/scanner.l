@@ -16,6 +16,7 @@
 #include "utility.h" // for PrintDebug()
 #include "errors.h"
 #include <math.h>
+#include <limits.h>
 
 /* Global variable: yylval
  * -----------------------
@@ -51,6 +52,8 @@ int parse_hex(char *str);
 int hex2int(char c);
 int intpow(int base, int exponent);
 double parse_exponent(char *str);
+int parse_int(char *str, int base, YYSTYPE *value);
+int parse_double(char *str, YYSTYPE *value);
 
 %}
 
@@ -278,23 +281,37 @@ false       {
             
  /* Integer */  
 {DIGIT}+    {
-                yylval.integerConstant = atoi(yytext);
+                int rt = parse_int(yytext, 10, &yylval);
+                if (rt != 0)
+                    ReportError::Formatted(&yylloc, "Integer Overflow: %s", yytext);
+                //yylval.integerConstant = parse_int(yytext);
+                //yylval.integerConstant = atoi(yytext);
                 return T_IntConstant;
             }
             
     /* Hexadecimal */
 0[xX][0-9a-fA-F]+   {
-                yylval.integerConstant = parse_hex(yytext);
+                //yylval.integerConstant = parse_hex(yytext);
+                int rt = parse_int(yytext, 16, &yylval);
+                if (rt != 0)
+                    ReportError::Formatted(&yylloc, "Integer Constant Overflow: %s", yytext);
                 return T_IntConstant;
             }
     /* Floataing point */
 {DIGIT}+\.{DIGIT}*   {
-                yylval.doubleConstant = atof(yytext);
+                int rt = parse_double(yytext, &yylval);
+                if (rt != 0)
+                    ReportError::Formatted(&yylloc, "Double Constant \"Overflow\": %s", yytext);
+                //yylval.doubleConstant = atof(yytext);
                 return T_DoubleConstant;
             }
     /* Exponent float */
-{DIGIT}+\.{DIGIT}*E[+\-]{DIGIT}+     {
-                yylval.doubleConstant = parse_exponent(yytext);
+[\+\-]?{DIGIT}+\.{DIGIT}*[eE][\+\-]?{DIGIT}+     {
+                //yylval.doubleConstant = parse_exponent(yytext);
+                
+                int rt = parse_double(yytext, &yylval);
+                if (rt != 0)
+                    ReportError::Formatted(&yylloc, "Double \"overflow\": %s", yytext);
                 return T_DoubleConstant;
             }
             
@@ -338,6 +355,43 @@ false       {
  * file is copied verbatim to the end of the generated lex.yy.c file.
  * This section is where you put definitions of helper functions.
  */
+ 
+ /* Function: parse_int
+  * -------------------
+  * This function parses ints, with error checking
+  */
+int parse_int(char *str, int base, YYSTYPE *value) {
+
+    errno = 0;
+    char *endptr;
+    int rt = 0;
+    long tmp = strtol(yytext, &endptr, base);
+    if (endptr == yytext || *endptr != '\0' 
+        || ( errno == ERANGE && (tmp == LONG_MIN || tmp == LONG_MAX)) )
+        rt = -1;
+    
+    value->integerConstant = (int)tmp;
+    if ((long)value->integerConstant != tmp)
+        rt = -1;
+    
+    return rt;
+    
+
+}
+
+int parse_double(char *str, YYSTYPE *value) {
+    errno = 0;
+    char *endptr;
+    int rt = 0;
+    double tmp = strtod(yytext, &endptr);
+    if (endptr == yytext || *endptr != '\0'
+        || ( errno == ERANGE && (tmp == HUGE_VAL || tmp == -HUGE_VAL)) )
+        rt = -1;
+    value->doubleConstant = tmp;
+    
+    return rt;
+
+}
 
  /* Function: parse_hex
   * -------------------
