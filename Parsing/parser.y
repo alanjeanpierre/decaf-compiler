@@ -47,6 +47,7 @@ void yyerror(const char *msg); // standard error-handling routine
     Decl *decl;
     List<Decl*> *declList;
     VarDecl *var;
+    Type *T;
 }
 
 
@@ -83,6 +84,8 @@ void yyerror(const char *msg); // standard error-handling routine
 %type <declList>  DeclList 
 %type <decl>      Decl
 %type <var>       VarDecl
+%type <T>         Type
+
 
 %%
 /* Rules
@@ -107,12 +110,17 @@ DeclList  :    DeclList Decl        { ($$=$1)->Append($2); }
           |    Decl                 { ($$ = new List<Decl*>)->Append($1); }
           ;
 
-Decl      :    VarDecl               { /* pp2: replace with correct rules  */ $$ = $1;} 
+Decl      :    VarDecl               { /* pp2: replace with correct rules  */ $$ = $1;}
 	            ;
           
-VarDecl   :    T_Int T_Identifier ';'   { /* pp2: replace with correct rules  */ $$ = new VarDecl(new Identifier(@2, $2), Type::intType); }
-	            ;
+VarDecl   :    Type T_Identifier ';'   {  $$ = new VarDecl(new Identifier(@2, $2), $1); }
+            ;
 
+Type      :    T_Int {$$ = Type::intType ;}
+          |    T_Double {$$ = Type::doubleType ;}
+          |    T_Bool {$$ = Type::boolType ;}
+          |    T_String {$$ = Type::stringType ;}
+          ;
 
 %%
 
