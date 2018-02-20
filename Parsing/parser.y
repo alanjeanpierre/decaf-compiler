@@ -47,7 +47,35 @@ void yyerror(const char *msg); // standard error-handling routine
     Decl *decl;
     List<Decl*> *declList;
     VarDecl *var;
+    FnDecl  *func;
     Type *T;
+    List<VarDecl*> *formallist;
+    List<VarDecl*> *formals;
+    List<VarDecl*> *vlist;
+    List<Stmt*>    *stmtlist;
+    StmtBlock *stmtblck;
+    Stmt      *stmt;
+    VarDecl *v;
+    Expr *expr;
+    ConditionalStmt *cond;
+    IfStmt *ifstmt;
+    WhileStmt *whilestmt;
+    ForStmt *forstmt;
+    Stmt *elsestmt;
+    AssignExpr *assign;
+    LogicalExpr *orexpr;
+    LogicalExpr *andexpr;
+    LValue *L;
+    ArrayAccess *arraccess;
+    FieldAccess *field;
+    LogicalExpr *logic;
+    ArithmeticExpr *arithmetic;
+    Identifier *id;
+    ArithmeticExpr *mult;
+    Expr *constant;
+    
+    
+
 }
 
 
@@ -84,7 +112,32 @@ void yyerror(const char *msg); // standard error-handling routine
 %type <declList>  DeclList 
 %type <decl>      Decl
 %type <var>       VarDecl
+%type <func>      FnDecl
 %type <T>         Type
+%type <v>         Variable
+%type <vlist>     VarDeclList
+%type <formals>   Formals
+%type <stmtblck>  StmtBlck
+%type <formallist> FormalList
+%type <stmt>      Stmt
+%type <stmtlist>  StmtList
+%type <expr>      Expr
+%type <cond>      CondStmt
+%type <ifstmt>        IfStmt
+%type <forstmt>       ForStmt
+%type <whilestmt>     WhileStmt
+%type <elsestmt>      ElseStmt
+%type <assign>    AssignmentExpr
+%type <orexpr>        OrExpr
+%type <andexpr>       AndExpr
+%type <L>         LValue
+%type <arraccess> ArrayAccess
+%type <field>     FieldAccess
+%type <logic>     LogicalExpr
+%type <arithmetic> ArithmeticExpr
+%type <mult>       MultExpr
+%type <id>         ID
+%type <constant>        Constant
 
 
 %%
@@ -111,16 +164,158 @@ DeclList  :    DeclList Decl        { ($$=$1)->Append($2); }
           ;
 
 Decl      :    VarDecl               { /* pp2: replace with correct rules  */ $$ = $1;}
+          |    FnDecl                { $$ = $1; }
 	            ;
+
+VarDeclList :  VarDeclList VarDecl { ($$ = $1)->Append($2);}
+            |  VarDecl             { ($$ = new List<VarDecl*>)->Append($1);}
+            |  /* empty */          { $$ = new List<VarDecl*>;}
           
-VarDecl   :    Type T_Identifier ';'   {  $$ = new VarDecl(new Identifier(@2, $2), $1); }
+VarDecl   :    Variable ';' { $$ = $1; }
             ;
+
+Variable  :    Type T_Identifier { $$ = new VarDecl( new Identifier(@2, $2), $1);}
+
 
 Type      :    T_Int {$$ = Type::intType ;}
           |    T_Double {$$ = Type::doubleType ;}
           |    T_Bool {$$ = Type::boolType ;}
           |    T_String {$$ = Type::stringType ;}
           ;
+
+FnDecl    :    Type T_Identifier '(' Formals ')' StmtBlck { $$ = new FnDecl(new Identifier(@2, $2), $1, $4);
+                                                            $$->SetFunctionBody($6);
+                                                            }
+          |    T_Void T_Identifier '(' Formals ')' StmtBlck { $$ = new FnDecl(new Identifier(@2, $2), Type::voidType, $4);
+                                                            $$->SetFunctionBody($6);
+                                                            }
+          ;
+
+Formals   :    FormalList   { $$ = $1; }
+          |    /* empty */ {$$ = new List<VarDecl*>;}
+          ;
+
+FormalList   :    FormalList ',' Variable { ($$=$1)->Append($3);}
+             |    Variable { ($$ = new List<VarDecl*>)->Append($1);}
+             ;
+
+StmtBlck  :   '{' VarDeclList StmtList '}' { $$ = new StmtBlock($2, $3);}
+
+StmtList  :  StmtList Stmt { ($$ = $1)->Append($2);}
+          |  Stmt          { ($$ = new List<Stmt*>)->Append($1);}
+          | /* empty */    { $$ = new List<Stmt*>;}
+
+Stmt      :   Expr ';' { $$ = $1;}
+          |   CondStmt { $$ = $1;}
+          |   StmtBlck { $$ = $1;}
+          ;
+
+CondStmt  :   IfStmt   { $$ = $1;}
+          |   WhileStmt {$$ = $1;}
+          |   ForStmt  { $$ = $1;}
+          ;
+
+IfStmt    :   T_If '(' Expr ')' Stmt ElseStmt { $$ = new IfStmt($3, $5, $6);}
+          ;
+
+ElseStmt  :   T_Else Stmt {$$ = $2;}
+          |   /* empty */ {$$ = NULL;}
+          ;
+
+WhileStmt :   T_While '(' Expr ')' Stmt {$$ = new WhileStmt($3, $5);}
+            ;
+
+ForStmt   :   T_For '(' Expr ';' Expr ';' Expr ';' ')' Stmt {$$ = new ForStmt($3, $5, $7, $10);}
+            ;
+
+
+Expr      :   AssignmentExpr { $$ = $1; }
+          |   LogicalExpr {$$ = $1; }
+          |   ArithmeticExpr {$$ = $1;}
+          |   Constant { $$ = $1; }
+          ;
+
+AssignmentExpr :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3);}
+               ;
+
+LogicalExpr : OrExpr { $$ = $1; }
+
+OrExpr    :  AndExpr { $$ = $1; }
+          |  OrExpr T_Or AndExpr { $$ = new LogicalExpr($1, new Operator(@2, "||"), $3);}
+          ;
+
+AndExpr   :  EqlExpr {;}
+          |  AndExpr T_And EqlExpr {;}
+          ;
+
+EqlExpr   :  RelExpr {;}
+          |  EqlExpr T_Equal RelExpr {;}
+          |  EqlExpr T_NotEqual RelExpr {;}
+          ;
+
+RelExpr   :  ArithmeticExpr {;}
+          |  ArithmeticExpr '>' ArithmeticExpr {;}
+          |  ArithmeticExpr '<' ArithmeticExpr {;}
+          |  ArithmeticExpr T_GreaterEqual ArithmeticExpr {;}
+          |  ArithmeticExpr T_LessEqual ArithmeticExpr {;}
+          ;
+
+ArithmeticExpr : MultExpr { $$ = $1; }
+               | ArithmeticExpr '+' Constant {;}
+               | ArithmeticExpr '-' Constant {;}
+               ;
+
+MultExpr  :  MultExpr '*' Constant {;}
+          |  MultExpr '/' Constant {;}
+          |  MultExpr '%' Constant {;}
+          ;
+
+LValue    :  ArrayAccess { $$ = $1; }
+          |  FieldAccess { $$ = $1; }
+          ;
+
+ArrayAccess : Expr '[' Expr ']' { $$ = new ArrayAccess(@1, $1, $3);}
+
+FieldAccess : Expr '.' ID { $$ = new FieldAccess($1, $3);}
+            | ID { $$ = new FieldAccess(NULL, $1);}
+
+Constant  : T_IntConstant { $$ = new IntConstant(@1, $1);}
+          | T_DoubleConstant { $$ = new DoubleConstant(@1, $1);}
+          | T_BoolConstant { $$ = new BoolConstant(@1, $1);}
+          | T_StringConstant { $$ = new StringConstant(@1, $1);}
+          ;
+
+
+ID        : T_Identifier { $$ = new Identifier(@1, $1);}
+/*
+AssignOp  : '=' { $$ = new Operator(@1, '=');}
+          ; 
+
+AddOp     : '+' { $$ = new Operator(@1, '+');}
+          | '-' { $$ = new Operator(@1, '-');}
+          ;
+
+MultOp    : '*' {$$ = new Operator(@1, '*');}
+          | '/' {$$ = new Operator(@1, '/');}
+          | '%' {$$ = new Operator(@1, '%');}
+          ;
+
+EqlOp     : T_Equal {$$ = new Operator(@1, "--");}
+          ;
+
+RelOp     : '<' {$$ = new Operator(@1, "<");}
+          | T_LessEqual {$$ = new Operator(@1, "<=");}
+          | '>' { $$ = new Operator(@1, ">");}
+          | T_GreaterEqual {$$ = new Operator(@1, ">=");}
+          ;
+
+OrOp      : T_Or {$$ = new Operator(@1, "||");}
+            ;
+
+AndOp     : T_And {$$ = new Operator(@1, "&&");}
+          ;
+*/
+
 
 %%
 
