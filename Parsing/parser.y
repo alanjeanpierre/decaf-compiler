@@ -62,16 +62,10 @@ void yyerror(const char *msg); // standard error-handling routine
     WhileStmt *whilestmt;
     ForStmt *forstmt;
     Stmt *elsestmt;
-    AssignExpr *assign;
-    LogicalExpr *orexpr;
-    LogicalExpr *andexpr;
     LValue *L;
     ArrayAccess *arraccess;
     FieldAccess *field;
-    LogicalExpr *logic;
-    ArithmeticExpr *arithmetic;
     Identifier *id;
-    ArithmeticExpr *mult;
     Expr *constant;
     
     
@@ -96,6 +90,16 @@ void yyerror(const char *msg); // standard error-handling routine
 %token   <integerConstant> T_IntConstant
 %token   <doubleConstant> T_DoubleConstant
 %token   <boolConstant> T_BoolConstant
+
+%left '='
+%left T_Or
+%left T_And
+%left T_Equal T_NotEqual
+%nonassoc '<' '>' T_GreaterEqual T_LessEqual
+%left '+' '-'
+%left '*' '/' '%'
+
+
 
 
 /* Non-terminal types
@@ -127,15 +131,9 @@ void yyerror(const char *msg); // standard error-handling routine
 %type <forstmt>       ForStmt
 %type <whilestmt>     WhileStmt
 %type <elsestmt>      ElseStmt
-%type <assign>    AssignmentExpr
-%type <orexpr>        OrExpr
-%type <andexpr>       AndExpr
 %type <L>         LValue
 %type <arraccess> ArrayAccess
 %type <field>     FieldAccess
-%type <logic>     LogicalExpr
-%type <arithmetic> ArithmeticExpr
-%type <mult>       MultExpr
 %type <id>         ID
 %type <constant>        Constant
 
@@ -229,45 +227,22 @@ ForStmt   :   T_For '(' Expr ';' Expr ';' Expr ';' ')' Stmt {$$ = new ForStmt($3
             ;
 
 
-Expr      :   AssignmentExpr { $$ = $1; }
-          |   LogicalExpr {$$ = $1; }
-          |   ArithmeticExpr {$$ = $1;}
-          |   Constant { $$ = $1; }
-          ;
-
-AssignmentExpr :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3);}
-               ;
-
-LogicalExpr : OrExpr { $$ = $1; }
-
-OrExpr    :  AndExpr { $$ = $1; }
-          |  OrExpr T_Or AndExpr { $$ = new LogicalExpr($1, new Operator(@2, "||"), $3);}
-          ;
-
-AndExpr   :  EqlExpr {;}
-          |  AndExpr T_And EqlExpr {;}
-          ;
-
-EqlExpr   :  RelExpr {;}
-          |  EqlExpr T_Equal RelExpr {;}
-          |  EqlExpr T_NotEqual RelExpr {;}
-          ;
-
-RelExpr   :  ArithmeticExpr {;}
-          |  ArithmeticExpr '>' ArithmeticExpr {;}
-          |  ArithmeticExpr '<' ArithmeticExpr {;}
-          |  ArithmeticExpr T_GreaterEqual ArithmeticExpr {;}
-          |  ArithmeticExpr T_LessEqual ArithmeticExpr {;}
-          ;
-
-ArithmeticExpr : MultExpr { $$ = $1; }
-               | ArithmeticExpr '+' Constant {;}
-               | ArithmeticExpr '-' Constant {;}
-               ;
-
-MultExpr  :  MultExpr '*' Constant {;}
-          |  MultExpr '/' Constant {;}
-          |  MultExpr '%' Constant {;}
+Expr      :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3);}
+          |  Expr T_Or Expr { $$ = new LogicalExpr($1, new Operator(@2, "||"), $3);}
+          |  Expr T_And Expr { $$ = new LogicalExpr($1, new Operator(@2, "&&"), $3);}
+          |  Expr T_Equal Expr { $$ = new EqualityExpr($1, new Operator(@2, "=="), $3);}
+          |  Expr T_NotEqual Expr { $$ = new EqualityExpr($1, new Operator(@2, "!="), $3);}
+          |  Expr '>' Expr { $$ = new RelationalExpr($1, new Operator(@2, ">"), $3);}
+          |  Expr '<' Expr { $$ = new RelationalExpr($1, new Operator(@2, "<"), $3);}
+          |  Expr T_GreaterEqual Expr { $$ = new RelationalExpr($1, new Operator(@2, ">="), $3);}
+          |  Expr T_LessEqual Expr {$$ = new RelationalExpr($1, new Operator(@2, "<="), $3);}
+          |  Expr '+' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "+"), $3);}
+          |  Expr '-' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "-"), $3);}
+          |  Expr '*' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "*"), $3) ;}
+          |  Expr '/' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "/"), $3);}
+          |  Expr '%' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "%"), $3);}
+          |  LValue { $$ = $1;}
+          |  Constant { $$ = $1;}
           ;
 
 LValue    :  ArrayAccess { $$ = $1; }
@@ -283,38 +258,11 @@ Constant  : T_IntConstant { $$ = new IntConstant(@1, $1);}
           | T_DoubleConstant { $$ = new DoubleConstant(@1, $1);}
           | T_BoolConstant { $$ = new BoolConstant(@1, $1);}
           | T_StringConstant { $$ = new StringConstant(@1, $1);}
+          | T_Null { $$ = new NullConstant(@1);}
           ;
 
 
 ID        : T_Identifier { $$ = new Identifier(@1, $1);}
-/*
-AssignOp  : '=' { $$ = new Operator(@1, '=');}
-          ; 
-
-AddOp     : '+' { $$ = new Operator(@1, '+');}
-          | '-' { $$ = new Operator(@1, '-');}
-          ;
-
-MultOp    : '*' {$$ = new Operator(@1, '*');}
-          | '/' {$$ = new Operator(@1, '/');}
-          | '%' {$$ = new Operator(@1, '%');}
-          ;
-
-EqlOp     : T_Equal {$$ = new Operator(@1, "--");}
-          ;
-
-RelOp     : '<' {$$ = new Operator(@1, "<");}
-          | T_LessEqual {$$ = new Operator(@1, "<=");}
-          | '>' { $$ = new Operator(@1, ">");}
-          | T_GreaterEqual {$$ = new Operator(@1, ">=");}
-          ;
-
-OrOp      : T_Or {$$ = new Operator(@1, "||");}
-            ;
-
-AndOp     : T_And {$$ = new Operator(@1, "&&");}
-          ;
-*/
 
 
 %%
