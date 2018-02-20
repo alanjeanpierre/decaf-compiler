@@ -172,7 +172,7 @@ VarDeclList :  VarDeclList VarDecl { ($$ = $1)->Append($2);}
 VarDecl   :    Variable ';' { $$ = $1; }
             ;
 
-Variable  :    Type T_Identifier { $$ = new VarDecl( new Identifier(@2, $2), $1);}
+Variable  :    Type ID { $$ = new VarDecl( $2, $1);}
 
 
 Type      :    T_Int {$$ = Type::intType ;}
