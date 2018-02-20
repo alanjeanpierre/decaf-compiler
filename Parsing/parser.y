@@ -67,6 +67,8 @@ void yyerror(const char *msg); // standard error-handling routine
     FieldAccess *field;
     Identifier *id;
     Expr *constant;
+    Expr *opt;
+    List<Expr*> *exprlist;
     
     
 
@@ -136,6 +138,8 @@ void yyerror(const char *msg); // standard error-handling routine
 %type <field>     FieldAccess
 %type <id>         ID
 %type <constant>        Constant
+%type <opt>      OptionalExpr
+%type <exprlist> ExprList
 
 
 %%
@@ -181,10 +185,10 @@ Type      :    T_Int {$$ = Type::intType ;}
           |    T_String {$$ = Type::stringType ;}
           ;
 
-FnDecl    :    Type T_Identifier '(' Formals ')' StmtBlck { $$ = new FnDecl(new Identifier(@2, $2), $1, $4);
+FnDecl    :    Type ID '(' Formals ')' StmtBlck { $$ = new FnDecl($2, $1, $4);
                                                             $$->SetFunctionBody($6);
                                                             }
-          |    T_Void T_Identifier '(' Formals ')' StmtBlck { $$ = new FnDecl(new Identifier(@2, $2), Type::voidType, $4);
+          |    T_Void ID '(' Formals ')' StmtBlck { $$ = new FnDecl($2, Type::voidType, $4);
                                                             $$->SetFunctionBody($6);
                                                             }
           ;
@@ -206,6 +210,10 @@ StmtList  :  StmtList Stmt { ($$ = $1)->Append($2);}
 Stmt      :   Expr ';' { $$ = $1;}
           |   CondStmt { $$ = $1;}
           |   StmtBlck { $$ = $1;}
+          |   T_Break ';' { $$ = new BreakStmt(@1);}
+          |   T_Return OptionalExpr ';' {$$ = new ReturnStmt(@1, $2);}
+          |   T_Print '(' ExprList ')' ';' { $$ = new PrintStmt($3); }
+          |   T_Break { $$ = new BreakStmt(@1);}
           ;
 
 CondStmt  :   IfStmt   { $$ = $1;}
@@ -223,9 +231,15 @@ ElseStmt  :   T_Else Stmt {$$ = $2;}
 WhileStmt :   T_While '(' Expr ')' Stmt {$$ = new WhileStmt($3, $5);}
             ;
 
-ForStmt   :   T_For '(' Expr ';' Expr ';' Expr ';' ')' Stmt {$$ = new ForStmt($3, $5, $7, $10);}
+ForStmt   :   T_For '(' OptionalExpr ';' Expr ';' Expr ')' Stmt {$$ = new ForStmt($3, $5, $7, $9);}
             ;
 
+ExprList  :  ExprList ',' Expr { ($$=$1)->Append($3);}
+          |  Expr { ($$ = new List<Expr*>)->Append($1);}
+
+OptionalExpr : /* empty */ { $$ = new EmptyExpr();}
+             | Expr { $$ = $1;}
+             ;
 
 Expr      :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3);}
           |  Expr T_Or Expr { $$ = new LogicalExpr($1, new Operator(@2, "||"), $3);}
