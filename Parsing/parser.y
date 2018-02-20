@@ -69,8 +69,12 @@ void yyerror(const char *msg); // standard error-handling routine
     Expr *constant;
     Expr *opt;
     List<Expr*> *exprlist;
-    
-    
+    ClassDecl *classdecl;
+    List<Decl*> *flist;
+    Decl *classfield;   
+    NamedType *ext;
+    List<NamedType*> *implList;   
+    List<NamedType*> *impl;
 
 }
 
@@ -140,6 +144,12 @@ void yyerror(const char *msg); // standard error-handling routine
 %type <constant>        Constant
 %type <opt>      OptionalExpr
 %type <exprlist> ExprList
+%type <classdecl> ClassDecl
+%type <flist>     FieldList
+%type <classfield>     Field
+%type <ext>       Ext
+%type <impl>      Impl
+%type <implList>  ImplList
 
 
 %%
@@ -167,6 +177,7 @@ DeclList  :    DeclList Decl        { ($$=$1)->Append($2); }
 
 Decl      :    VarDecl               { /* pp2: replace with correct rules  */ $$ = $1;}
           |    FnDecl                { $$ = $1; }
+          |    ClassDecl             { $$ = $1; }
 	            ;
 
 VarDeclList :  VarDeclList VarDecl { ($$ = $1)->Append($2);}
@@ -183,6 +194,8 @@ Type      :    T_Int {$$ = Type::intType ;}
           |    T_Double {$$ = Type::doubleType ;}
           |    T_Bool {$$ = Type::boolType ;}
           |    T_String {$$ = Type::stringType ;}
+          |    Type '[' ']' { $$ = new ArrayType(@1, $1);}
+          |    ID { $$ = new NamedType($1);}
           ;
 
 FnDecl    :    Type ID '(' Formals ')' StmtBlck { $$ = new FnDecl($2, $1, $4);
@@ -200,6 +213,29 @@ Formals   :    FormalList   { $$ = $1; }
 FormalList   :    FormalList ',' Variable { ($$=$1)->Append($3);}
              |    Variable { ($$ = new List<VarDecl*>)->Append($1);}
              ;
+
+ClassDecl : T_Class ID Ext Impl '{' FieldList '}' {$$ = new ClassDecl($2, $3, $4, $6);}
+
+Ext       : T_Extends ID { $$ = new NamedType($2);}
+          | /* empty */ { $$ = NULL; }
+          ;
+
+Impl      : T_Implements ImplList { $$ = $2; }
+          | /* empty */ { $$ = new List<NamedType*>; }
+          ;
+
+ImplList  : ImplList ',' ID { ($$=$1)->Append(new NamedType($3));}
+          | ID {($$=new List<NamedType*>)->Append(new NamedType($1));}
+          ;
+
+FieldList : FieldList Field { ($$ = $1)->Append($2);}
+          | Field { ($$ = new List<Decl*>)->Append($1);}
+          | /* empty */ { $$ = new List<Decl*>;}
+          ;
+
+Field     : VarDecl { $$ = $1; }
+          | FnDecl {$$ = $1;}
+          ;
 
 StmtBlck  :   '{' VarDeclList StmtList '}' { $$ = new StmtBlock($2, $3);}
 
@@ -257,6 +293,7 @@ Expr      :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3
           |  Expr '%' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "%"), $3);}
           |  LValue { $$ = $1;}
           |  Constant { $$ = $1;}
+          |  T_New '(' ID ')' { $$ = new NewExpr(@1, new NamedType($3));}
           ;
 
 LValue    :  ArrayAccess { $$ = $1; }
@@ -266,7 +303,9 @@ LValue    :  ArrayAccess { $$ = $1; }
 ArrayAccess : Expr '[' Expr ']' { $$ = new ArrayAccess(@1, $1, $3);}
 
 FieldAccess : Expr '.' ID { $$ = new FieldAccess($1, $3);}
+            | T_This '.' ID {$$ = new FieldAccess(new This(@1), $3);}
             | ID { $$ = new FieldAccess(NULL, $1);}
+            ;
 
 Constant  : T_IntConstant { $$ = new IntConstant(@1, $1);}
           | T_DoubleConstant { $$ = new DoubleConstant(@1, $1);}
