@@ -61,7 +61,6 @@ void yyerror(const char *msg); // standard error-handling routine
     IfStmt *ifstmt;
     WhileStmt *whilestmt;
     ForStmt *forstmt;
-    Stmt *elsestmt;
     LValue *L;
     ArrayAccess *arraccess;
     FieldAccess *field;
@@ -102,6 +101,8 @@ void yyerror(const char *msg); // standard error-handling routine
 %token   <doubleConstant> T_DoubleConstant
 %token   <boolConstant> T_BoolConstant
 
+%precedence NOELSE
+%precedence IFELSE
 %left '='
 %left T_Or
 %left T_And
@@ -109,6 +110,9 @@ void yyerror(const char *msg); // standard error-handling routine
 %nonassoc '<' '>' T_GreaterEqual T_LessEqual
 %left '+' '-'
 %left '*' '/' '%'
+%right '!'
+%nonassoc '[' '.'
+
 
 
 
@@ -141,7 +145,6 @@ void yyerror(const char *msg); // standard error-handling routine
 %type <ifstmt>        IfStmt
 %type <forstmt>       ForStmt
 %type <whilestmt>     WhileStmt
-%type <elsestmt>      ElseStmt
 %type <L>         LValue
 %type <arraccess> ArrayAccess
 %type <field>     FieldAccess
@@ -192,7 +195,7 @@ Decl      :    VarDecl               { $$ = $1;}
 	            ;
 
 VarDeclList :  VarDeclList VarDecl { ($$ = $1)->Append($2);}
-            |  /* empty */          { $$ = new List<VarDecl*>;}
+            |  VarDecl         { ($$ = new List<VarDecl*>)->Append($1);}
           
 VarDecl   :    Variable ';' { $$ = $1; }
             ;
@@ -254,18 +257,19 @@ InterfaceField : InterfaceField Type ID '(' Formals ')' ';' { ($$=$1)->Append(ne
 
 
 StmtBlck  :   '{' VarDeclList StmtList '}' { $$ = new StmtBlock($2, $3);}
+          |   '{' StmtList '}' {$$ = new StmtBlock(new List<VarDecl*>, $2); }
+          |   '{' VarDeclList '}' { $$ = new StmtBlock($2, new List<Stmt*>);}
+          |   '{' '}' { $$ = new StmtBlock(new List<VarDecl*>, new List<Stmt*>);}
 
 StmtList  :  StmtList Stmt { ($$ = $1)->Append($2);}
-          |  Stmt          { ($$ = new List<Stmt*>)->Append($1);}
-          | /* empty */    { $$ = new List<Stmt*>;}
+          |  Stmt { ($$ = new List<Stmt*>)->Append($1);}
 
-Stmt      :   Expr ';' { $$ = $1;}
+Stmt      :   OptionalExpr ';' { $$ = $1;}
           |   CondStmt { $$ = $1;}
           |   StmtBlck { $$ = $1;}
           |   T_Break ';' { $$ = new BreakStmt(@1);}
           |   T_Return OptionalExpr ';' {$$ = new ReturnStmt(@1, $2);}
           |   T_Print '(' ExprList ')' ';' { $$ = new PrintStmt($3); }
-          |   T_Break { $$ = new BreakStmt(@1);}
           ;
 
 CondStmt  :   IfStmt   { $$ = $1;}
@@ -273,12 +277,10 @@ CondStmt  :   IfStmt   { $$ = $1;}
           |   ForStmt  { $$ = $1;}
           ;
 
-IfStmt    :   T_If '(' Expr ')' Stmt ElseStmt { $$ = new IfStmt($3, $5, $6);}
+IfStmt    :   T_If '(' Expr ')' Stmt T_Else Stmt %prec IFELSE { $$ = new IfStmt($3, $5, $7);}
+          |   T_If '(' Expr ')' Stmt %prec NOELSE {$$ = new IfStmt($3, $5, NULL); }
           ;
 
-ElseStmt  :   T_Else Stmt {$$ = $2;}
-          |   /* empty */ {$$ = NULL;}
-          ;
 
 WhileStmt :   T_While '(' Expr ')' Stmt {$$ = new WhileStmt($3, $5);}
             ;
@@ -294,6 +296,9 @@ OptionalExpr : /* empty */ { $$ = new EmptyExpr();}
              ;
 
 Expr      :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3);}
+          |  Constant { $$ = $1;}   
+          |  Call { $$ = $1; }  
+          |  LValue { $$ = $1;}
           |  Expr T_Or Expr { $$ = new LogicalExpr($1, new Operator(@2, "||"), $3);}
           |  Expr T_And Expr { $$ = new LogicalExpr($1, new Operator(@2, "&&"), $3);}
           |  Expr T_Equal Expr { $$ = new EqualityExpr($1, new Operator(@2, "=="), $3);}
@@ -307,19 +312,16 @@ Expr      :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3
           |  Expr '*' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "*"), $3) ;}
           |  Expr '/' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "/"), $3);}
           |  Expr '%' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "%"), $3);}
-          |  LValue { $$ = $1;}
-          |  Constant { $$ = $1;}
           |  T_New '(' ID ')' { $$ = new NewExpr(@1, new NamedType($3));}
-          |  Call { $$ = $1; }
           |  '(' Expr ')' { $$ = $2;}
           |  T_ReadInteger '(' ')' { $$ = new ReadIntegerExpr(@1);}
           |  T_NewArray '(' Expr ',' Type ')' { $$ = new NewArrayExpr(@1, $3, $5);}
           | '!' Expr { $$ = new LogicalExpr(new Operator(@1, "!"), $2);}
+          | T_This { $$ = new This(@1);}
           ;
 
 
 Call      :  Expr '.' ID '(' Actuals ')' { $$ = new Call(@1, $1, $3, $5);}
-          |  T_This '.' ID '(' Actuals ')' { $$ = new Call(@1, new This(@1), $3, $5);}
           |  ID '(' Actuals ')' { $$ = new Call(@1, NULL, $1, $3);}
           ;
 
@@ -337,7 +339,6 @@ LValue    :  ArrayAccess { $$ = $1; }
 ArrayAccess : Expr '[' Expr ']' { $$ = new ArrayAccess(@1, $1, $3);}
 
 FieldAccess : Expr '.' ID { $$ = new FieldAccess($1, $3);}
-            | T_This '.' ID {$$ = new FieldAccess(new This(@1), $3);}
             | ID { $$ = new FieldAccess(NULL, $1);}
             ;
 
