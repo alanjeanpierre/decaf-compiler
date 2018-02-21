@@ -75,6 +75,11 @@ void yyerror(const char *msg); // standard error-handling routine
     NamedType *ext;
     List<NamedType*> *implList;   
     List<NamedType*> *impl;
+    Call *call;
+    List<Expr*> *actList;
+    List<Expr*> *act;
+    InterfaceDecl *interfacedecl;
+    List<Decl*> *intfield;
 
 }
 
@@ -150,6 +155,11 @@ void yyerror(const char *msg); // standard error-handling routine
 %type <ext>       Ext
 %type <impl>      Impl
 %type <implList>  ImplList
+%type <call>      Call
+%type <actList>   ActualList
+%type <act>       Actuals
+%type <interfacedecl> InterfaceDecl
+%type <intfield>  InterfaceField
 
 
 %%
@@ -175,13 +185,13 @@ DeclList  :    DeclList Decl        { ($$=$1)->Append($2); }
           |    Decl                 { ($$ = new List<Decl*>)->Append($1); }
           ;
 
-Decl      :    VarDecl               { /* pp2: replace with correct rules  */ $$ = $1;}
+Decl      :    VarDecl               { $$ = $1;}
           |    FnDecl                { $$ = $1; }
           |    ClassDecl             { $$ = $1; }
+          |    InterfaceDecl         { $$ = $1; }
 	            ;
 
 VarDeclList :  VarDeclList VarDecl { ($$ = $1)->Append($2);}
-            |  VarDecl             { ($$ = new List<VarDecl*>)->Append($1);}
             |  /* empty */          { $$ = new List<VarDecl*>;}
           
 VarDecl   :    Variable ';' { $$ = $1; }
@@ -194,7 +204,7 @@ Type      :    T_Int {$$ = Type::intType ;}
           |    T_Double {$$ = Type::doubleType ;}
           |    T_Bool {$$ = Type::boolType ;}
           |    T_String {$$ = Type::stringType ;}
-          |    Type '[' ']' { $$ = new ArrayType(@1, $1);}
+          |    Type T_Dims { $$ = new ArrayType(@1, $1);}
           |    ID { $$ = new NamedType($1);}
           ;
 
@@ -229,13 +239,19 @@ ImplList  : ImplList ',' ID { ($$=$1)->Append(new NamedType($3));}
           ;
 
 FieldList : FieldList Field { ($$ = $1)->Append($2);}
-          | Field { ($$ = new List<Decl*>)->Append($1);}
           | /* empty */ { $$ = new List<Decl*>;}
           ;
 
 Field     : VarDecl { $$ = $1; }
           | FnDecl {$$ = $1;}
           ;
+
+InterfaceDecl : T_Interface ID '{' InterfaceField '}' {$$ = new InterfaceDecl($2, $4);}
+
+InterfaceField : InterfaceField Type ID '(' Formals ')' ';' { ($$=$1)->Append(new FnDecl($3, $2, $5)); }
+               | InterfaceField T_Void ID '(' Formals ')' ';' { ($$=$1)->Append(new FnDecl($3, Type::voidType, $5)); }
+               | /* empty */ { $$ = new List<Decl*>;}
+
 
 StmtBlck  :   '{' VarDeclList StmtList '}' { $$ = new StmtBlock($2, $3);}
 
@@ -294,7 +310,25 @@ Expr      :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3
           |  LValue { $$ = $1;}
           |  Constant { $$ = $1;}
           |  T_New '(' ID ')' { $$ = new NewExpr(@1, new NamedType($3));}
+          |  Call { $$ = $1; }
+          |  '(' Expr ')' { $$ = $2;}
+          |  T_ReadInteger '(' ')' { $$ = new ReadIntegerExpr(@1);}
+          |  T_NewArray '(' Expr ',' Type ')' { $$ = new NewArrayExpr(@1, $3, $5);}
+          | '!' Expr { $$ = new LogicalExpr(new Operator(@1, "!"), $2);}
           ;
+
+
+Call      :  Expr '.' ID '(' Actuals ')' { $$ = new Call(@1, $1, $3, $5);}
+          |  T_This '.' ID '(' Actuals ')' { $$ = new Call(@1, new This(@1), $3, $5);}
+          |  ID '(' Actuals ')' { $$ = new Call(@1, NULL, $1, $3);}
+          ;
+
+Actuals   :  ActualList { $$ = $1; }
+          |  /* empty */ { $$ = new List<Expr*>;}
+          ;
+
+ActualList : ActualList ',' Expr { ($$ = $1)->Append($3);}
+           | Expr { ($$ = new List<Expr*>)->Append($1);}
 
 LValue    :  ArrayAccess { $$ = $1; }
           |  FieldAccess { $$ = $1; }
@@ -316,6 +350,7 @@ Constant  : T_IntConstant { $$ = new IntConstant(@1, $1);}
 
 
 ID        : T_Identifier { $$ = new Identifier(@1, $1);}
+
 
 
 %%
