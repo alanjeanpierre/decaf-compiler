@@ -17,6 +17,7 @@ flag=false
 for file in samples/*.decaf
 do 
     tests=$((tests + 1))
+    solutions/dcc < "$file" > "samples/$(basename $file .decaf).out" 2>&1
     out="samples/$(basename $file .decaf).out"
     echo -e "**********************************"
     echo -e "*** Running $file ***"
