@@ -1,0 +1,16 @@
+int main() {
+
+
+    int x;
+    int y;
+    if (y == x)
+        if (x == 2)
+            y = 5;
+        else
+            y = 3;
+    else
+        x = 5;
+
+    x = -x;
+    y = x + -y;
+}
