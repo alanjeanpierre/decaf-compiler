@@ -290,7 +290,7 @@ IfStmt    :   T_If '(' Expr ')' Stmt T_Else Stmt { $$ = new IfStmt($3, $5, $7);}
 WhileStmt :   T_While '(' Expr ')' Stmt {$$ = new WhileStmt($3, $5);}
             ;
 
-ForStmt   :   T_For '(' OptionalExpr ';' Expr ';' Expr ')' Stmt {$$ = new ForStmt($3, $5, $7, $9);}
+ForStmt   :   T_For '(' OptionalExpr ';' Expr ';' OptionalExpr ')' Stmt {$$ = new ForStmt($3, $5, $7, $9);}
             ;
 
 ExprList  :  ExprList ',' Expr { ($$=$1)->Append($3);}
