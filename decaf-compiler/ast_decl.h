@@ -15,6 +15,7 @@
 
 #include "ast.h"
 #include "list.h"
+#include "env_vector.h"
 
 class Type;
 class NamedType;
@@ -29,6 +30,8 @@ class Decl : public Node
   public:
     Decl(Identifier *name);
     friend std::ostream& operator<<(std::ostream& out, Decl *d) { return out << d->id; }
+    const char* getName();
+    virtual void Check(EnvVector *env) {;}
 };
 
 class VarDecl : public Decl 
@@ -38,6 +41,7 @@ class VarDecl : public Decl
     
   public:
     VarDecl(Identifier *name, Type *type);
+    void Check(EnvVector *env);
 };
 
 class ClassDecl : public Decl 
@@ -50,6 +54,7 @@ class ClassDecl : public Decl
   public:
     ClassDecl(Identifier *name, NamedType *extends, 
               List<NamedType*> *implements, List<Decl*> *members);
+    void Check(EnvVector *env);
 };
 
 class InterfaceDecl : public Decl 
@@ -59,6 +64,7 @@ class InterfaceDecl : public Decl
     
   public:
     InterfaceDecl(Identifier *name, List<Decl*> *members);
+    void Check(EnvVector *env);
 };
 
 class FnDecl : public Decl 
@@ -71,6 +77,7 @@ class FnDecl : public Decl
   public:
     FnDecl(Identifier *name, Type *returnType, List<VarDecl*> *formals);
     void SetFunctionBody(Stmt *b);
+    void Check(EnvVector *env);
 };
 
 #endif

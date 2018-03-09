@@ -30,7 +30,9 @@
 
 #include <deque>
 #include "utility.h"  // for Assert()
-  
+#include "errors.h"
+
+class EnvVector;
 class Node;
 
 template<class Element> class List {

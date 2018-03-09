@@ -4,6 +4,7 @@
  */
 #include "ast_type.h"
 #include "ast_decl.h"
+#include "errors.h"
 #include <string.h>
 
  
@@ -27,15 +28,25 @@ Type::Type(const char *n) {
     Assert(n);
     typeName = strdup(n);
 }
-
-
-
 	
 NamedType::NamedType(Identifier *i) : Type(*i->GetLocation()) {
     Assert(i != NULL);
     (id=i)->SetParent(this);
 } 
 
+const char* NamedType::getName() {
+    return id->getName();
+}
+
+Identifier* NamedType::getID() {
+    return id;
+}
+
+void NamedType::Check(EnvVector *env) {
+    if (!env->TypeExists(getID())) {
+        ReportError::IdentifierNotDeclared(getID(), LookingForType);
+    }
+}
 
 ArrayType::ArrayType(yyltype loc, Type *et) : Type(loc) {
     Assert(et != NULL);

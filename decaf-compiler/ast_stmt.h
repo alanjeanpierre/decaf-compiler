@@ -35,6 +35,7 @@ class Stmt : public Node
   public:
      Stmt() : Node() {}
      Stmt(yyltype loc) : Node(loc) {}
+     virtual void Check(EnvVector *env) {;}
 };
 
 class StmtBlock : public Stmt 
@@ -45,6 +46,7 @@ class StmtBlock : public Stmt
     
   public:
     StmtBlock(List<VarDecl*> *variableDeclarations, List<Stmt*> *statements);
+    void Check(EnvVector *env);
 };
 
   
@@ -72,12 +74,14 @@ class ForStmt : public LoopStmt
   
   public:
     ForStmt(Expr *init, Expr *test, Expr *step, Stmt *body);
+    void Check(EnvVector *env);
 };
 
 class WhileStmt : public LoopStmt 
 {
   public:
     WhileStmt(Expr *test, Stmt *body) : LoopStmt(test, body) {}
+    void Check(EnvVector *env);
 };
 
 class IfStmt : public ConditionalStmt 
@@ -87,12 +91,14 @@ class IfStmt : public ConditionalStmt
   
   public:
     IfStmt(Expr *test, Stmt *thenBody, Stmt *elseBody);
+    void Check(EnvVector *env);
 };
 
 class BreakStmt : public Stmt 
 {
   public:
     BreakStmt(yyltype loc) : Stmt(loc) {}
+    void Check(EnvVector *env);
 };
 
 class ReturnStmt : public Stmt  
@@ -102,6 +108,7 @@ class ReturnStmt : public Stmt
   
   public:
     ReturnStmt(yyltype loc, Expr *expr);
+    void Check(EnvVector *env);
 };
 
 class PrintStmt : public Stmt
@@ -111,6 +118,7 @@ class PrintStmt : public Stmt
     
   public:
     PrintStmt(List<Expr*> *arguments);
+    void Check(EnvVector *env);
 };
 
 
