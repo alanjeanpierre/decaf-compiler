@@ -42,8 +42,8 @@ Identifier* NamedType::getID() {
     return id;
 }
 
-void NamedType::Check(EnvVector *env) {
-    if (!env->TypeExists(getID())) {
+void NamedType::Check() {
+    if (!parent->GetEnv()->TypeExists(getID())) {
         ReportError::IdentifierNotDeclared(getID(), LookingForType);
     }
 }

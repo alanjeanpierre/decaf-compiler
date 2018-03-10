@@ -9,6 +9,9 @@ EnvVector::EnvVector() {
     parent = NULL;
 }
 
+void EnvVector::SetParent(EnvVector *other) {
+    parent = other;
+}
 
 EnvVector* EnvVector::Push() {
     EnvVector *child = new EnvVector();
@@ -18,6 +21,10 @@ EnvVector* EnvVector::Push() {
 
 EnvVector* EnvVector::Pop() {
     return parent;
+}
+
+Decl* EnvVector::SearchInScope(Decl* id) {
+    return env->Lookup(id->getName());
 }
 
 Decl* EnvVector::Search(Decl* id) {
@@ -31,6 +38,19 @@ Decl* EnvVector::Search(Decl* id) {
     }
     return NULL;
 }
+
+
+    Decl* EnvVector::Search(const char* id) {
+        EnvVector *h = this;
+        Decl *s;
+        while(h) {
+            s = h->env->Lookup(id);
+            if(s)
+                return s;
+            h = h->parent;
+        }
+        return NULL;
+    }
 
 bool EnvVector::InScope(Decl* id) {
     return env->Lookup(id->getName()) != NULL;

@@ -22,17 +22,17 @@ void Program::Check() {
      *      checking itself, which makes for a great use of inheritance
      *      and polymorphism in the node classes.
      */
-    EnvVector *v = new EnvVector();
+    env = new EnvVector();
     
 
-    // check decls
+    // build symbol table for current scope
     for (int i = 0; i < decls->NumElements(); i++) {
-        v->InsertIfNotExists(decls->Nth(i));
+        decls->Nth(i)->CheckScope(env);
     }
 
-    // check new scopes/types
+    // check decls/types for current scope and children
     for (int i = 0; i < decls->NumElements(); i++) {
-        decls->Nth(i)->Check(v);
+        decls->Nth(i)->Check();
     }
 }
 
@@ -42,18 +42,19 @@ StmtBlock::StmtBlock(List<VarDecl*> *d, List<Stmt*> *s) {
     (stmts=s)->SetParentAll(this);
 }
 
-void StmtBlock::Check(EnvVector *env) {
-
+void StmtBlock::Check() {
+ 
     env = env->Push();
 
     // check decls
     for (int i = 0; i < decls->NumElements(); i++) {
         env->InsertIfNotExists(decls->Nth(i));
-        decls->Nth(i)->Check(env);
+        decls->Nth(i)->SetEnv(env);
+        decls->Nth(i)->Check();
     }
 
     for (int i = 0; i < stmts->NumElements(); i++) {
-        stmts->Nth(i)->Check(env);
+        stmts->Nth(i)->Check();
     }
 
 }
@@ -70,14 +71,14 @@ ForStmt::ForStmt(Expr *i, Expr *t, Expr *s, Stmt *b): LoopStmt(t, b) {
     (step=s)->SetParent(this);
 }
 
-void ForStmt::Check(EnvVector *env) {
+void ForStmt::Check() {
     env = env->Push();
-    body->Check(env);
+    body->Check();
 }
 
-void WhileStmt::Check(EnvVector *env) {
+void WhileStmt::Check() {
     env = env->Push();
-    body->Check(env);
+    body->Check();
 }
 
 IfStmt::IfStmt(Expr *t, Stmt *tb, Stmt *eb): ConditionalStmt(t, tb) { 
@@ -86,16 +87,16 @@ IfStmt::IfStmt(Expr *t, Stmt *tb, Stmt *eb): ConditionalStmt(t, tb) {
     if (elseBody) elseBody->SetParent(this);
 }
 
-void IfStmt::Check(EnvVector *env) {
+void IfStmt::Check() {
     env = env->Push();
-    body->Check(env);
+    body->Check();
 }
 
 ReturnStmt::ReturnStmt(yyltype loc, Expr *e) : Stmt(loc) { 
     Assert(e != NULL);
     (expr=e)->SetParent(this);
 }
-void ReturnStmt::Check(EnvVector *env) {
+void ReturnStmt::Check() {
     ;
 }
   
@@ -104,11 +105,11 @@ PrintStmt::PrintStmt(List<Expr*> *a) {
     (args=a)->SetParentAll(this);
 }
 
-void PrintStmt::Check(EnvVector *env) {
+void PrintStmt::Check() {
     ;
 }
 
 
-void BreakStmt::Check(EnvVector *env) {
+void BreakStmt::Check() {
     ;
 }

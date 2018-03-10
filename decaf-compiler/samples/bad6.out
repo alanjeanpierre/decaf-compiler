@@ -10,3 +10,9 @@
         ^^^^^^^
 *** Method 'Method2' must match inherited type signature
 
+
+*** Error line 7.
+class Base implements Binkyable {
+                      ^^^^^^^^^
+*** Class 'Base' does not implement entire interface 'Binkyable'
+

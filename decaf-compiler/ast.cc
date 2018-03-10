@@ -8,6 +8,8 @@
 #include <string.h> // strdup
 #include <stdio.h>  // printf
 
+class EnvVector;
+
 Node::Node(yyltype loc) {
     location = new yyltype(loc);
     parent = NULL;
@@ -16,6 +18,10 @@ Node::Node(yyltype loc) {
 Node::Node() {
     location = NULL;
     parent = NULL;
+}
+
+void Node::SetEnv(EnvVector *env) {
+    this->env=env;
 }
 	 
 Identifier::Identifier(yyltype loc, const char *n) : Node(loc) {

@@ -31,7 +31,10 @@ class Decl : public Node
     Decl(Identifier *name);
     friend std::ostream& operator<<(std::ostream& out, Decl *d) { return out << d->id; }
     const char* getName();
-    virtual void Check(EnvVector *env) {;}
+    virtual void Check() {;}
+    virtual void CheckScope(EnvVector *other) {;}
+    virtual void CheckInheritance(Decl *other) {;}
+    bool CheckName(Decl* other) { return strcmp(getName(), other->getName()) == 0;}
 };
 
 class VarDecl : public Decl 
@@ -41,11 +44,17 @@ class VarDecl : public Decl
     
   public:
     VarDecl(Identifier *name, Type *type);
-    void Check(EnvVector *env);
+    void Check();
+    void CheckScope(EnvVector *env);
+    bool MatchesOther(VarDecl *other);
+    void CheckInheritance(Decl* other);
 };
 
 class ClassDecl : public Decl 
 {
+  private:
+    bool checked;
+
   protected:
     List<Decl*> *members;
     NamedType *extends;
@@ -54,7 +63,9 @@ class ClassDecl : public Decl
   public:
     ClassDecl(Identifier *name, NamedType *extends, 
               List<NamedType*> *implements, List<Decl*> *members);
-    void Check(EnvVector *env);
+    void Check();
+    void CheckScope(EnvVector *env);
+    void CheckInheritance(Decl* other) {;}
 };
 
 class InterfaceDecl : public Decl 
@@ -64,7 +75,10 @@ class InterfaceDecl : public Decl
     
   public:
     InterfaceDecl(Identifier *name, List<Decl*> *members);
-    void Check(EnvVector *env);
+    void Check();
+    void CheckScope(EnvVector *env);
+    bool CheckImplements(EnvVector *sub);
+    void CheckInheritance(Decl* other) {;}
 };
 
 class FnDecl : public Decl 
@@ -77,7 +91,10 @@ class FnDecl : public Decl
   public:
     FnDecl(Identifier *name, Type *returnType, List<VarDecl*> *formals);
     void SetFunctionBody(Stmt *b);
-    void Check(EnvVector *env);
+    void Check();
+    void CheckScope(EnvVector *env);
+    bool MatchesOther(FnDecl *other);
+    void CheckInheritance(Decl* other);
 };
 
 #endif

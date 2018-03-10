@@ -31,17 +31,24 @@
 
 #include <stdlib.h>   // for NULL
 #include "location.h"
+//#include "env_vector.h"
 #include <iostream>
+
+class EnvVector;
 
 class Node 
 {
   protected:
     yyltype *location;
     Node *parent;
+    EnvVector *env;
 
   public:
     Node(yyltype loc);
     Node();
+
+    void SetEnv(EnvVector *env);
+    EnvVector *GetEnv() { return env; }
     
     yyltype *GetLocation()   { return location; }
     void SetParent(Node *p)  { parent = p; }
