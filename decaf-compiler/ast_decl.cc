@@ -14,7 +14,6 @@ Decl::Decl(Identifier *n) : Node(*n->GetLocation()) {
     env = NULL;
 }
 
-
 const char* Decl::getName() {
     return id->getName();
 }
@@ -37,9 +36,8 @@ void VarDecl::CheckScope(EnvVector *env) {
     SetEnv(env);
 }
 
-void VarDecl::CheckInheritance(Decl* other) {
-    if (!CheckName(other))
-        ReportError::DeclConflict(this, other);
+void VarDecl::CheckTypes() {
+    type->Check();
 }
 
 
@@ -54,12 +52,18 @@ ClassDecl::ClassDecl(Identifier *n, NamedType *ex, List<NamedType*> *imp, List<D
 }
 
 
-void ClassDecl::Check() {
+void ClassDecl::CheckInheritance() {
     if (checked)
         return;
     checked = true;
 
     env = parent->GetEnv()->Push();
+
+    for (int i = 0; i < members->NumElements(); i++) {
+        Decl* n = members->Nth(i);
+        env->InsertIfNotExists(n);
+        n->Check();
+    }
     
     // build extends symbol table 
     // ONLY NEED DIRECT PARENTS SYMBOL TABLE
@@ -69,92 +73,63 @@ void ClassDecl::Check() {
             env->AddType(extends->getID());
         }
         if (ClassDecl *e = dynamic_cast<ClassDecl*>(env->Search(extends->getName()))) {
-            for (int i = 0; i < e->members->NumElements(); i++) {
-                env->Insert(e->members->Nth(i));
-            }
+            e->CheckInheritance();
+            EnvVector *parentScope = e->GetEnv();
+            env->SetParent(parentScope);
+            for (int i = 0; i < members->NumElements(); i++) {
+                Decl* n = members->Nth(i);
+                Decl* d = parentScope->SearchInScope(n);
+                if (d) {
+                    // matched name
+                    if (dynamic_cast<VarDecl*>(n))
+                        // no variable redecls
+                        ReportError::DeclConflict(n, d);
+                    else if (FnDecl* dfn = dynamic_cast<FnDecl*>(d)) {
+                        // is a function too!
+                        FnDecl* nfn = dynamic_cast<FnDecl*>(n);
+                        if(!nfn->MatchesOther(dfn)) {
+                            ReportError::OverrideMismatch(nfn);
+                        }
+                    }
+                    else {
+                        ReportError::DeclConflict(n, d);
+                    }
+                }
+                
+            } 
         }
     }
+    
 
     // build interface methods
     for (int i = 0; i < implements->NumElements(); i++) {
         if(!env->TypeExists(implements->Nth(i)->getID())) {
             ReportError::IdentifierNotDeclared(implements->Nth(i)->getID(), LookingForInterface);
             env->AddType(implements->Nth(i)->getID());
-        }
-        
-        if (Decl *impl = env->Search(implements->Nth(i)->getName()))
-            impl->Check();
-    }
-
-
-}
-/*
-void ClassDecl::Check() {    
-
-    if (checked)
-        return;
-    checked = true;
-
-    env = parent->GetEnv()->Push();
-    // symbols
-    for (int i = 0; i < members->NumElements(); i++) {
-        members->Nth(i)->CheckScope(env);
-    }
-
-    if (extends != NULL ) {
-        if (!env->TypeExists(extends->getID())) {
-            ReportError::IdentifierNotDeclared(extends->getID(), LookingForClass);
-            env->AddType(extends->getID());
-        }
-        
-        // recursively check parents classes
-        // and use their environment vectors instead of global scopes
-        if (Decl *e = env->Search(extends->getName())) {
-            e->Check();
-            env->SetParent(e->GetEnv()->Push());
-        }
-    }
-
-    for (int i = 0; i < implements->NumElements(); i++) {
-        if(!env->TypeExists(implements->Nth(i)->getID())) {
-            ReportError::IdentifierNotDeclared(implements->Nth(i)->getID(), LookingForInterface);
-            env->AddType(implements->Nth(i)->getID());
-        }
-        
-        if (Decl *impl = env->Search(implements->Nth(i)->getName()))
-            impl->Check();
-    }
-
-
-    // type check
-    for (int i = 0; i < members->NumElements(); i++) {
-        members->Nth(i)->Check();
-    }
-
-    // check interfacing
-    for (int i = 0; i < implements->NumElements(); i++) {
-        InterfaceDecl *interface = dynamic_cast<InterfaceDecl*>(parent->GetEnv()->Search(implements->Nth(i)->getName()));
-        if(!interface->CheckImplements(env)) {
-            ReportError::InterfaceNotImplemented(this, implements->Nth(i));
-        }
-    }
-
-    // check extends
-    if (extends) {
-        Decl* p = parent->GetEnv()->Search(extends->getName());
-        ClassDecl *e = dynamic_cast<ClassDecl*>(p);
-        if (e) {
-            EnvVector *pscope = e->GetEnv();
-            for (int i = 0; i < members->NumElements(); i++) {
-                Decl* cur = members->Nth(i);
-                Decl* prev = pscope->SearchInScope(cur);
-                if (prev)
-                    prev->CheckInheritance(cur);
+        } else {    
+            InterfaceDecl *impl = dynamic_cast<InterfaceDecl*>(env->Search(implements->Nth(i)->getName()));
+            if (impl) {
+                impl->Check();
+                impl->AddMethodsToScope(env);
             }
         }
     }
+
+
+
 }
-*/
+
+
+void ClassDecl::CheckImplements() {
+        // build interface methods
+    for (int i = 0; i < implements->NumElements(); i++) {
+        InterfaceDecl *impl = dynamic_cast<InterfaceDecl*>(env->Search(implements->Nth(i)->getName()));
+        if (impl && !impl->CheckImplements(env)) 
+            ReportError::InterfaceNotImplemented(this, implements->Nth(i));
+    }
+
+}
+
 
 void ClassDecl::CheckScope(EnvVector *env) {
     env->InsertIfNotExists(this);
@@ -194,12 +169,22 @@ bool InterfaceDecl::CheckImplements(EnvVector *sub) {
             continue;
         }
         if(!match_par->MatchesOther(match_sub)) {
-            ReportError::OverrideMismatch(match_sub);
             ok = false;
         }
 
     }
     return ok;
+}
+
+void InterfaceDecl::AddMethodsToScope(EnvVector *sub) {
+    for (int i = 0; i < members->NumElements(); i++) {
+        if (FnDecl* d = dynamic_cast<FnDecl*>(sub->SearchInScope(members->Nth(i)))) {
+            if (!d->MatchesOther(dynamic_cast<FnDecl*>(members->Nth(i)))) {
+                ReportError::OverrideMismatch(d);
+            }
+        }
+        //sub->InsertIfNotExists(members->Nth(i));
+    }
 }
 
 FnDecl::FnDecl(Identifier *n, Type *r, List<VarDecl*> *d) : Decl(n) {
@@ -216,13 +201,24 @@ void FnDecl::SetFunctionBody(Stmt *b) {
 bool FnDecl::MatchesOther(FnDecl* other) {
     if (!this->returnType->IsEquivalentTo(other->returnType)) 
         return false;
+
     if (this->formals->NumElements() != other->formals->NumElements())
         return false;
-    for (int i = 0; i < this->formals->NumElements(); i++) {
-        if(!this->formals->Nth(i)->MatchesOther(other->formals->Nth(i)))
+
+    for (int i = 0; i < formals->NumElements(); i++) {
+        if(!formals->Nth(i)->MatchesOther(other->formals->Nth(i)))
             return false;
+        
     }
     return true;
+}
+
+void FnDecl::CheckTypes() {
+    env = env->Push();
+    for (int i = 0; i < formals->NumElements(); i++) {
+        env->InsertIfNotExists(formals->Nth(i));
+        formals->Nth(i)->Check();
+    }
 }
 
 void FnDecl::Check() { 
@@ -241,11 +237,6 @@ void FnDecl::CheckScope(EnvVector *env) {
     SetEnv(env);
 }
 
-void FnDecl::CheckInheritance(Decl *other) {
-    FnDecl *otherF = dynamic_cast<FnDecl*>(other);
-    if (!otherF)
-        ReportError::DeclConflict(this, other);
-    else
-        if (!MatchesOther(otherF))
-            ReportError::OverrideMismatch(other);
+void FnDecl::CheckFunctions() {
+    body->Check();
 }

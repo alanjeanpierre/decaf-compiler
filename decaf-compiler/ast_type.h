@@ -32,8 +32,9 @@ class Type : public Node
     
     virtual void PrintToStream(std::ostream& out) { out << typeName; }
     friend std::ostream& operator<<(std::ostream& out, Type *t) { t->PrintToStream(out); return out; }
-    virtual bool IsEquivalentTo(Type *other) { return this == other; }
+    bool IsEquivalentTo(Type *other) { return strcmp(getName(), other->getName()) == 0; }
     virtual void Check() { ; }
+    virtual char* getName() { return typeName; }
 };
 
 class NamedType : public Type 
@@ -45,9 +46,10 @@ class NamedType : public Type
     NamedType(Identifier *i);
     
     void PrintToStream(std::ostream& out) { out << id; }
-    const char* getName();
+    char* getName();
     Identifier* getID();  
     void Check();
+    bool IsEquivalentTo(Type *other);
 };
 
 class ArrayType : public Type 
@@ -60,6 +62,8 @@ class ArrayType : public Type
     
     void PrintToStream(std::ostream& out) { out << elemType << "[]"; }
     void Check() { elemType->Check(); }
+    char* getName() { return elemType->getName(); }
+    bool IsEquivalentTo(Type *other);
 };
 
  

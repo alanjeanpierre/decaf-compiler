@@ -30,9 +30,22 @@ void Program::Check() {
         decls->Nth(i)->CheckScope(env);
     }
 
-    // check decls/types for current scope and children
+    // check types
     for (int i = 0; i < decls->NumElements(); i++) {
-        decls->Nth(i)->Check();
+        decls->Nth(i)->CheckTypes();
+    }
+    // check inheritance
+    for (int i = 0; i < decls->NumElements(); i++) {
+        decls->Nth(i)->CheckInheritance();
+    }
+    // check implements
+    for (int i = 0; i < decls->NumElements(); i++) {
+        decls->Nth(i)->CheckImplements();
+    }
+
+    // check fn children
+    for (int i = 0; i < decls->NumElements(); i++) {
+        decls->Nth(i)->CheckFunctions();
     }
 }
 

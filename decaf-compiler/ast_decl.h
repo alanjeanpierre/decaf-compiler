@@ -33,7 +33,10 @@ class Decl : public Node
     const char* getName();
     virtual void Check() {;}
     virtual void CheckScope(EnvVector *other) {;}
-    virtual void CheckInheritance(Decl *other) {;}
+    virtual void CheckInheritance() {;}
+    virtual void CheckImplements() {;}
+    virtual void CheckFunctions() {;}
+    virtual void CheckTypes() {;}
     bool CheckName(Decl* other) { return strcmp(getName(), other->getName()) == 0;}
 };
 
@@ -47,13 +50,18 @@ class VarDecl : public Decl
     void Check();
     void CheckScope(EnvVector *env);
     bool MatchesOther(VarDecl *other);
-    void CheckInheritance(Decl* other);
+
+    void CheckInheritance() {;}
+    void CheckImplements() {;}
+    void CheckFunctions() {;}
+    void CheckTypes();
 };
 
 class ClassDecl : public Decl 
 {
   private:
     bool checked;
+    EnvVector *inheritanceVector;
 
   protected:
     List<Decl*> *members;
@@ -63,9 +71,13 @@ class ClassDecl : public Decl
   public:
     ClassDecl(Identifier *name, NamedType *extends, 
               List<NamedType*> *implements, List<Decl*> *members);
-    void Check();
+    void Check() {;}
     void CheckScope(EnvVector *env);
-    void CheckInheritance(Decl* other) {;}
+
+    void CheckInheritance();
+    void CheckImplements();
+    void CheckFunctions() {;}
+    void CheckTypes() {;}
 };
 
 class InterfaceDecl : public Decl 
@@ -78,7 +90,12 @@ class InterfaceDecl : public Decl
     void Check();
     void CheckScope(EnvVector *env);
     bool CheckImplements(EnvVector *sub);
-    void CheckInheritance(Decl* other) {;}
+    void AddMethodsToScope(EnvVector *sub);
+
+    void CheckInheritance() {;}
+    void CheckImplements() {;}
+    void CheckFunctions() {;}
+    void CheckTypes() {;}
 };
 
 class FnDecl : public Decl 
@@ -94,7 +111,11 @@ class FnDecl : public Decl
     void Check();
     void CheckScope(EnvVector *env);
     bool MatchesOther(FnDecl *other);
-    void CheckInheritance(Decl* other);
+
+    void CheckInheritance() {;}
+    void CheckImplements() {;}
+    void CheckTypes();
+    void CheckFunctions();
 };
 
 #endif
