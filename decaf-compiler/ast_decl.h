@@ -78,6 +78,9 @@ class ClassDecl : public Decl
     void CheckImplements();
     void CheckFunctions() {;}
     void CheckTypes() {;}
+
+    void CheckExtends();
+    void BuildInterface();
 };
 
 class InterfaceDecl : public Decl 

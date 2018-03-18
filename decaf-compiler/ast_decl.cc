@@ -51,57 +51,47 @@ ClassDecl::ClassDecl(Identifier *n, NamedType *ex, List<NamedType*> *imp, List<D
     checked = false;
 }
 
+void ClassDecl::CheckExtends() {
 
-void ClassDecl::CheckInheritance() {
-    if (checked)
+    if (extends == NULL)
         return;
-    checked = true;
 
-    env = parent->GetEnv()->Push();
-
+    if (!env->TypeExists(extends->getID())) {
+        ReportError::IdentifierNotDeclared(extends->getID(), LookingForClass);
+        env->AddType(extends->getID());
+    }
+    
+    ClassDecl *e = dynamic_cast<ClassDecl*>(env->Search(extends->getName()));
+    if (e == NULL)
+        return;
+        
+    e->CheckInheritance();
+    EnvVector *parentScope = e->GetEnv();
+    env->SetParent(parentScope);
     for (int i = 0; i < members->NumElements(); i++) {
         Decl* n = members->Nth(i);
-        env->InsertIfNotExists(n);
-        n->Check();
-    }
-    
-    // build extends symbol table 
-    // ONLY NEED DIRECT PARENTS SYMBOL TABLE
-    if (extends != NULL) {
-        if (!env->TypeExists(extends->getID())) {
-            ReportError::IdentifierNotDeclared(extends->getID(), LookingForClass);
-            env->AddType(extends->getID());
+        Decl* d = parentScope->SearchInScope(n);
+        if (d == NULL)
+            continue;
+        //else
+        // matched name
+        if (dynamic_cast<VarDecl*>(n)) {
+            // no variable redecls
+            ReportError::DeclConflict(n, d);
+        } else if (FnDecl* dfn = dynamic_cast<FnDecl*>(d)) {
+            // is a function too!
+            FnDecl* nfn = dynamic_cast<FnDecl*>(n);
+            if(!nfn->MatchesOther(dfn)) {
+                ReportError::OverrideMismatch(nfn);
+            }
+        } else {
+            ReportError::DeclConflict(n, d);
         }
-        if (ClassDecl *e = dynamic_cast<ClassDecl*>(env->Search(extends->getName()))) {
-            e->CheckInheritance();
-            EnvVector *parentScope = e->GetEnv();
-            env->SetParent(parentScope);
-            for (int i = 0; i < members->NumElements(); i++) {
-                Decl* n = members->Nth(i);
-                Decl* d = parentScope->SearchInScope(n);
-                if (d) {
-                    // matched name
-                    if (dynamic_cast<VarDecl*>(n))
-                        // no variable redecls
-                        ReportError::DeclConflict(n, d);
-                    else if (FnDecl* dfn = dynamic_cast<FnDecl*>(d)) {
-                        // is a function too!
-                        FnDecl* nfn = dynamic_cast<FnDecl*>(n);
-                        if(!nfn->MatchesOther(dfn)) {
-                            ReportError::OverrideMismatch(nfn);
-                        }
-                    }
-                    else {
-                        ReportError::DeclConflict(n, d);
-                    }
-                }
-                
-            } 
-        }
-    }
-    
+    } 
+}
 
-    // build interface methods
+void ClassDecl::BuildInterface() {
+
     for (int i = 0; i < implements->NumElements(); i++) {
         if(!env->TypeExists(implements->Nth(i)->getID())) {
             ReportError::IdentifierNotDeclared(implements->Nth(i)->getID(), LookingForInterface);
@@ -114,9 +104,28 @@ void ClassDecl::CheckInheritance() {
             }
         }
     }
+}
 
+void ClassDecl::CheckInheritance() {
+    if (checked)
+        return;
+    checked = true;
 
+    env = parent->GetEnv()->Push();
 
+    // build class scope
+    for (int i = 0; i < members->NumElements(); i++) {
+        Decl* n = members->Nth(i);
+        env->InsertIfNotExists(n);
+        n->Check();
+    }
+    
+    // build extends symbol table 
+    // ONLY NEED DIRECT PARENTS SYMBOL TABLE
+    CheckExtends();
+    
+    // build interface methods
+    BuildInterface();
 }
 
 
