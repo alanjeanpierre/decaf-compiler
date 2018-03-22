@@ -34,7 +34,7 @@ NamedType::NamedType(Identifier *i) : Type(*i->GetLocation()) {
     (id=i)->SetParent(this);
 } 
 
-const char* NamedType::getName() {
+char* NamedType::getName() {
     return id->getName();
 }
 
@@ -48,9 +48,17 @@ void NamedType::Check() {
     }
 }
 
+bool NamedType::IsEquivalentTo(Type *other) {
+    return strcmp(getName(), other->getName()) == 0;
+}
+
 ArrayType::ArrayType(yyltype loc, Type *et) : Type(loc) {
     Assert(et != NULL);
     (elemType=et)->SetParent(this);
 }
 
+
+bool ArrayType::IsEquivalentTo(Type *other) {
+    return elemType->IsEquivalentTo(other);
+}
 

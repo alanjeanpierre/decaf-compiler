@@ -27,6 +27,19 @@ Decl* EnvVector::SearchInScope(Decl* id) {
     return env->Lookup(id->getName());
 }
 
+Decl* EnvVector::SearchN(Decl* id, int n) {
+    EnvVector *h = this;
+    Decl* s;
+    for (int i = 0; i < n && h; i++) {
+
+        s = h->env->Lookup(id->getName());
+        if(s)
+            return s;
+        h = h->parent;
+    }
+    return NULL;
+}
+
 Decl* EnvVector::Search(Decl* id) {
     EnvVector *h = this;
     Decl* s;
