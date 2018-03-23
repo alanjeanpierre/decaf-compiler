@@ -1,0 +1,18 @@
+
+*** Error line 12.
+  d = 2 + 3 * 4 - (6 / 2);
+    ^
+*** Incompatible operands: double = int
+
+
+*** Error line 15.
+  Print(a, b, d);
+              ^
+*** Incompatible argument 3: double given, int/bool/string expected
+
+
+*** Error line 17.
+  foo(a + 2, d/2, a == b && d >= 1.0);
+              ^
+*** Incompatible operands: double / int
+

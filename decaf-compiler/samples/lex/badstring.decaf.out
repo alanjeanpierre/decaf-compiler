@@ -1,0 +1,12 @@
+
+*** Error line 3.
+"this is not a
+^^^^^^^^^^^^^^
+*** Unterminated string constant: "this is not a
+
+
+*** Error line 4.
+ valid string constant"
+       ^^^^^^
+*** syntax error
+

@@ -13,43 +13,34 @@ tests=0
 
 
 flag=false
+for folder in samples/*;
+do
+    for file in $folder/*.decaf
+    do 
+        tests=$((tests + 1))
+        solutions/dcc < "$file" > "$file.out" 2>&1
+        out="$file.out"
+        echo -e -n "$file: "
 
-for file in samples/*.decaf
-do 
-    tests=$((tests + 1))
-    solutions/dcc < "$file" > "samples/$(basename $file .decaf).out" 2>&1
-    out="samples/$(basename $file .decaf).out"
-    echo -e "**********************************"
-    echo -e "*** Running $file ***"
-    echo -e "**********************************"
-
-    if [ "$long" = true ]
-    then
-        cat "$file"
-        echo -e "\n**********************************"
-    fi
-    d="$(./dcc < $file 2>&1 | diff - $out 2>&1)"
-    if [ "$d" != "" ]
-    then
-        echo -e "\e[91mTest fail\e[39m"
-        echo ""
-        if [ "$long" = true ]
+        d="$(./dcc < $file 2>&1 | diff - $out 2>&1)"
+        if [ "$d" != "" ]
         then
-            echo -e "\e[31m$d\e[39m"
-        fi
-        flag=true      
-    else
-        if [ "$long" = true ]
-        then
-            cat "$out"
-            echo -e "\n**********************************"
-        fi
-        echo -e "\e[92mTest pass\e[39m"  
-        pass=$((pass + 1))
+            echo -e "\e[91mTest fail\e[39m"
+            if [ "$long" = true ]
+            then
+                echo -e "\e[31m$d\e[39m"
+            fi
+            flag=true      
+        else
+            if [ "$long" = true ]
+            then
+                cat "$out"
+            fi
+            echo -e "\e[92mTest pass\e[39m"  
+            pass=$((pass + 1))
 
-    fi
-    echo ""
-    echo ""
+        fi
+    done
 done
     
 if [ "$flag" = "true" ]

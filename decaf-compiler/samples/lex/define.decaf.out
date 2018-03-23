@@ -1,0 +1,12 @@
+
+*** Error line 1.
+#define PROCEDURE void
+^
+*** Unrecognized char: '#'
+
+
+*** Error line 1.
+#define PROCEDURE void
+                  ^^^^
+*** syntax error
+

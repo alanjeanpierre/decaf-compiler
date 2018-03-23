@@ -1,0 +1,6 @@
+
+*** Error line 14.
+  c = a + b;
+        ^
+*** Incompatible operands: int + int[]
+
