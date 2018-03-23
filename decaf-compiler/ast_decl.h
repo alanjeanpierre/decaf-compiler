@@ -123,6 +123,7 @@ class FnDecl : public Decl
     void CheckImplements() {;}
     void CheckTypes();
     void CheckFunctions();
+    List<Type*> *GetFormalsTypes();
     Type *GetType() { return returnType; }
 };
 

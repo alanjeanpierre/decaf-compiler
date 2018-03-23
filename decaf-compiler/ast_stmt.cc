@@ -145,7 +145,12 @@ PrintStmt::PrintStmt(List<Expr*> *a) {
 }
 
 void PrintStmt::Check() {
-    ;
+    for (int i = 0; i < args->NumElements(); i++) {
+        Type *t = args->Nth(i)->CheckType(env);
+        if (!(t->IsConvertableTo(Type::intType) || t->IsConvertableTo(Type::stringType) || t->IsConvertableTo(Type::boolType))) {
+            ReportError::ArgMismatch(args->Nth(i), i+1, t, new Type("int/bool/string"));
+        }
+    }
 }
 
 

@@ -33,7 +33,7 @@ class Type : public Node
     virtual void PrintToStream(std::ostream& out) { out << typeName; }
     friend std::ostream& operator<<(std::ostream& out, Type *t) { t->PrintToStream(out); return out; }
     bool IsEquivalentTo(Type *other) { return strcmp(getName(), other->getName()) == 0; }
-    bool IsConvertableTo(Type *other);
+    virtual bool IsConvertableTo(Type *other);
     virtual void Check() { ; }
     virtual char* getName() { return typeName; }
 };

@@ -1,7 +1,8 @@
 #include "env_vector.h"
 #include "errors.h"
+#include "ast_expr.h"
 
-Hashtable<Identifier*> *EnvVector::types = new Hashtable<Identifier*>;
+Hashtable<Decl*> *EnvVector::types = new Hashtable<Decl*>;
 
 EnvVector::EnvVector() {
 
@@ -86,6 +87,40 @@ bool EnvVector::TypeExists(Identifier *t) {
     return EnvVector::types->Lookup(t->getName()) != NULL;
 }
 
-void EnvVector::AddType(Identifier *t) {
+void EnvVector::AddType(Decl *t) {
     return EnvVector::types->Enter(t->getName(), t);
+}
+
+Decl *EnvVector::GetTypeDecl(Identifier *t) {
+    return EnvVector::types->Lookup(t->getName());
+}
+
+EnvVector *EnvVector::GetProperScope(EnvVector *env, Expr *e) {
+    if (e == NULL)
+        return env;
+
+    // if this
+    if (This* t = dynamic_cast<This*>(e)) {
+        if (ClassDecl* c = dynamic_cast<ClassDecl*>(e->GetParent())) {
+            return c->GetEnv();
+        } else {
+            ReportError::ThisOutsideClassScope(t);
+            return env;
+        }
+    }
+
+    // if var.field
+    if (FieldAccess *f = dynamic_cast<FieldAccess*>(e)) {
+        Decl* d =  env->Search(f->field->getName());
+        if (d) {
+            if (ClassDecl* c = dynamic_cast<ClassDecl*>(d)) {
+                return c->GetEnv();
+            } else {
+                return NULL;
+            }
+        }
+    } 
+    
+    return env;
+    
 }

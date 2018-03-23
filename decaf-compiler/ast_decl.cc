@@ -58,7 +58,7 @@ void ClassDecl::CheckExtends() {
 
     if (!env->TypeExists(extends->getID())) {
         ReportError::IdentifierNotDeclared(extends->getID(), LookingForClass);
-        env->AddType(extends->getID());
+        env->AddType(new ClassDecl(extends->getID(), NULL, NULL, NULL));
     }
     
     ClassDecl *e = dynamic_cast<ClassDecl*>(env->Search(extends->getName()));
@@ -97,7 +97,7 @@ void ClassDecl::BuildInterface() {
     for (int i = 0; i < implements->NumElements(); i++) {
         if(!env->TypeExists(implements->Nth(i)->getID())) {
             ReportError::IdentifierNotDeclared(implements->Nth(i)->getID(), LookingForInterface);
-            env->AddType(implements->Nth(i)->getID());
+            env->AddType(new InterfaceDecl(implements->Nth(i)->getID(), NULL));
         } else {    
             InterfaceDecl *impl = dynamic_cast<InterfaceDecl*>(env->Search(implements->Nth(i)->getName()));
             if (impl) {
@@ -144,7 +144,7 @@ void ClassDecl::CheckImplements() {
 
 void ClassDecl::CheckScope(EnvVector *env) {
     env->InsertIfNotExists(this);
-    env->AddType(this->id);
+    env->AddType(this);
     SetEnv(env);
 }
 
@@ -163,7 +163,7 @@ void InterfaceDecl::Check() {
 
 void InterfaceDecl::CheckScope(EnvVector *env) {
     env->InsertIfNotExists(this);
-    env->AddType(this->id);
+    env->AddType(this);
     SetEnv(env);
 }
 
@@ -250,7 +250,16 @@ void FnDecl::CheckScope(EnvVector *env) {
 }
 
 void FnDecl::CheckFunctions() {
+    body->SetEnv(env);
     body->Check();
+}
+
+List<Type*> *FnDecl::GetFormalsTypes() {
+    List<Type*> *ts = new List<Type*>;
+    for (int i = 0; i < formals->NumElements(); i++) {
+        ts->Append(formals->Nth(i)->GetType());
+    }
+    return ts;
 }
 
 Type *ClassDecl::GetType() {

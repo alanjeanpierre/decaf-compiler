@@ -134,8 +134,9 @@ void AssignExpr::Check() {
 }
 
 Type *AssignExpr::CheckType(EnvVector *env) {
-    Type *r = right->CheckType(env);
     Type *l = left->CheckType(env);
+    Type *r = right->CheckType(env);
+
 
     if (r->IsConvertableTo(l))
         return l;
@@ -170,22 +171,20 @@ Type *ArrayAccess::CheckType(EnvVector *env) {
 }
 
 void FieldAccess::Check() {
-    CheckType(env);
+    CheckType(newEnv);
 }
 
 Type *FieldAccess::CheckType(EnvVector *env) {
-    if (base != NULL) {
-        if (dynamic_cast<This*>(base) == NULL) {
-            ;
-        } else { // else this.xxx
-            // need to check if in class scope
-            ;
-        }
+    EnvVector *newEnv = EnvVector::GetProperScope(env, base);
+
+    if (newEnv == NULL) {
+        ReportError::FieldNotFoundInBase(field, base);
+        return Type::errorType;
     }
 
-    Decl *f = env->Search(field->getName());
+    Decl *f = newEnv->Search(field->getName());
     if ( f == NULL) {
-        ReportError::IdentifierNotDeclared(field, LookingForClass);
+        ReportError::IdentifierNotDeclared(field, LookingForVariable);
         return Type::errorType;
     } 
 
@@ -197,7 +196,36 @@ void Call::Check() {
 }
 
 Type *Call::CheckType(EnvVector *env) {
-    return Type::errorType;
+
+    FnDecl *f = dynamic_cast<FnDecl*>(env->Search(field->getName()));
+    if (f == NULL) {
+        ReportError::IdentifierNotDeclared(field, LookingForFunction);
+        return Type::errorType;
+    } 
+
+    List<Type*> *formals = f->GetFormalsTypes();
+    List<Type*> *actuals_t = new List<Type*>;
+    for (int i = 0; i < actuals->NumElements(); i++) {
+        actuals_t->Append(actuals->Nth(i)->CheckType(env));
+    }
+
+    int n = actuals_t->NumElements();
+    if (actuals_t->NumElements() != formals->NumElements()) {
+        ReportError::NumArgsMismatch(field, formals->NumElements(), actuals->NumElements());
+        if (actuals_t->NumElements() > formals->NumElements())
+            n = formals->NumElements();
+    }
+
+    for (int i = 0; i < n; i++) {
+        Type *t = actuals_t->Nth(i);
+        if (!t->IsConvertableTo(formals->Nth(i))) {
+            ReportError::ArgMismatch(actuals->Nth(i), i+1, t, formals->Nth(i));
+        }
+    }
+
+    return f->GetType();
+
+
 }
 
 void NewExpr::Check() {
@@ -205,10 +233,27 @@ void NewExpr::Check() {
 }
 
 Type *NewExpr::CheckType(EnvVector *env) {
-    return cType;
+    if (env->TypeExists(cType->getID())) {
+        return cType;
+    }
+
+    ReportError::IdentifierNotDeclared(cType->getID(), LookingForClass);
+    return Type::errorType;
 }
 
 void NewArrayExpr::Check() {
+    CheckType(env);
+}
+
+void This::Check() {
+    CheckType(env);
+}
+
+void ReadIntegerExpr::Check() {
+    CheckType(env);
+}
+
+void ReadLineExpr::Check() {
     CheckType(env);
 }
 
@@ -216,7 +261,7 @@ Type *NewArrayExpr::CheckType(EnvVector *env) {
     if (!size->CheckType(env)->IsConvertableTo(Type::intType))
         ReportError::NewArraySizeNotInteger(size);
     
-    return elemType;
+    return new ArrayType(*location, elemType);
 }
 
 ArrayAccess::ArrayAccess(yyltype loc, Expr *b, Expr *s) : LValue(loc) {

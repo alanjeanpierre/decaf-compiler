@@ -30,6 +30,9 @@ Type::Type(const char *n) {
 }
 
 bool Type::IsConvertableTo(Type *other) {
+    if (dynamic_cast<ArrayType*>(other) != NULL)
+        return false;
+
     return IsEquivalentTo(other) || IsEquivalentTo(Type::errorType)
     || (IsEquivalentTo(Type::nullType) && dynamic_cast<NamedType*>(other) != NULL);
 }
@@ -68,7 +71,12 @@ ArrayType::ArrayType(yyltype loc, Type *et) : Type(loc) {
 }
 
 bool ArrayType::IsConvertableTo(Type *other) {
-    return elemType->IsConvertableTo(other);
+    ArrayType *o = dynamic_cast<ArrayType*>(other);
+    if (o == NULL) {
+        return false;
+    }
+
+    return elemType->IsConvertableTo(o->elemType);
 }
 
 

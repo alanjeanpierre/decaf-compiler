@@ -5,12 +5,14 @@
 #include "ast_decl.h"
 #include "ast_type.h"
 
+class Expr;
+
 class EnvVector {
 
     private:
         Hashtable<Decl*> *env;
         EnvVector *parent;
-        static Hashtable<Identifier*> *types;
+        static Hashtable<Decl*> *types;
     
     public:
         EnvVector();
@@ -25,9 +27,11 @@ class EnvVector {
         void Insert(Decl* id);
         bool InsertIfNotExists(Decl* id);
 
-        void AddType(Identifier *t);
+        void AddType(Decl *t);
         bool TypeExists(Identifier *t);
+        Decl* GetTypeDecl(Identifier *t);
         
+        static EnvVector *GetProperScope(EnvVector *env, Expr *e);
 };
 
 
