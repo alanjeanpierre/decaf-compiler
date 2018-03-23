@@ -214,6 +214,7 @@ class FieldAccess : public LValue
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env);
+    char *GetFieldName() { return field->getName(); }
 };
 
 /* Like field access, call is used both for qualified base.field()

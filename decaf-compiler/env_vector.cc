@@ -101,20 +101,16 @@ EnvVector *EnvVector::GetProperScope(EnvVector *env, Expr *e) {
 
     // if this
     if (This* t = dynamic_cast<This*>(e)) {
-        if (ClassDecl* c = dynamic_cast<ClassDecl*>(e->GetParent())) {
-            return c->GetEnv();
-        } else {
-            ReportError::ThisOutsideClassScope(t);
-            return env;
-        }
+        return e->GetParent()->GetEnv();
     }
 
     // if var.field
-    if (FieldAccess *f = dynamic_cast<FieldAccess*>(e)) {
-        Decl* d =  env->Search(f->field->getName());
+    if (FieldAccess *f = dynamic_cast<FieldAccess*>(e)) { 
+        Decl* d =  env->Search(f->GetFieldName());
         if (d) {
-            if (ClassDecl* c = dynamic_cast<ClassDecl*>(d)) {
-                return c->GetEnv();
+            if (NamedType* t = dynamic_cast<NamedType*>(d->GetType())) {
+                Decl *e2 = env->GetTypeDecl(t->getID());
+                return e2->GetEnv();
             } else {
                 return NULL;
             }
@@ -123,4 +119,18 @@ EnvVector *EnvVector::GetProperScope(EnvVector *env, Expr *e) {
     
     return env;
     
+}
+
+void EnvVector::PrintScope() { 
+    EnvVector *h = this;
+    Decl* s;
+    while(h) {
+        Iterator<Decl*> it = h->env->GetIterator();
+        while((s = it.GetNextValue()) != NULL) {
+            std::cout << s << std::endl;
+        }
+
+        std::cout << std::endl;
+        h = h->parent;
+    }
 }

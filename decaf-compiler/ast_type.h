@@ -17,9 +17,11 @@
 #include "env_vector.h"
 #include <iostream>
 
+class InheritanceHierarchy;
 
 class Type : public Node 
 {
+  
   protected:
     char *typeName;
 
@@ -36,6 +38,8 @@ class Type : public Node
     virtual bool IsConvertableTo(Type *other);
     virtual void Check() { ; }
     virtual char* getName() { return typeName; }
+    
+    static InheritanceHierarchy *hierarchy;
 };
 
 class NamedType : public Type 

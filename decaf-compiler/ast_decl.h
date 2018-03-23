@@ -31,6 +31,7 @@ class Decl : public Node
     Decl(Identifier *name);
     friend std::ostream& operator<<(std::ostream& out, Decl *d) { return out << d->id; }
     const char* getName();
+    Identifier *getID() { return id; }
     virtual void Check() {;}
     virtual void CheckScope(EnvVector *other) {;}
     virtual void CheckInheritance() {;}
@@ -78,7 +79,7 @@ class ClassDecl : public Decl
 
     void CheckInheritance();
     void CheckImplements();
-    void CheckFunctions() {;}
+    void CheckFunctions();
     void CheckTypes() {;}
 
     void CheckExtends();

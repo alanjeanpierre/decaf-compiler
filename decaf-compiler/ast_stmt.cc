@@ -29,15 +29,17 @@ void Program::Check() {
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->CheckScope(env);
     }
-
     // check types
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->CheckTypes();
     }
+
+
     // check inheritance
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->CheckInheritance();
     }
+    
     // check implements
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->CheckImplements();
@@ -59,6 +61,9 @@ void StmtBlock::Check() {
  
     env = env->Push();
 
+    //std::cout << "Printing scope at line: " << parent->GetLocation()->first_line << std::endl;
+    //env->PrintScope();
+    //std::cout << std::endl;
     // check decls
     for (int i = 0; i < decls->NumElements(); i++) {
         env->InsertIfNotExists(decls->Nth(i));

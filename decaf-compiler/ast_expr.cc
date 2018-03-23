@@ -134,6 +134,7 @@ void AssignExpr::Check() {
 }
 
 Type *AssignExpr::CheckType(EnvVector *env) {
+
     Type *l = left->CheckType(env);
     Type *r = right->CheckType(env);
 
@@ -171,14 +172,14 @@ Type *ArrayAccess::CheckType(EnvVector *env) {
 }
 
 void FieldAccess::Check() {
-    CheckType(newEnv);
+    CheckType(env);
 }
 
 Type *FieldAccess::CheckType(EnvVector *env) {
     EnvVector *newEnv = EnvVector::GetProperScope(env, base);
 
     if (newEnv == NULL) {
-        ReportError::FieldNotFoundInBase(field, base);
+        ReportError::FieldNotFoundInBase(field, base->CheckType(env));
         return Type::errorType;
     }
 
@@ -187,6 +188,7 @@ Type *FieldAccess::CheckType(EnvVector *env) {
         ReportError::IdentifierNotDeclared(field, LookingForVariable);
         return Type::errorType;
     } 
+
 
     return f->GetType();
 }
@@ -197,7 +199,21 @@ void Call::Check() {
 
 Type *Call::CheckType(EnvVector *env) {
 
-    FnDecl *f = dynamic_cast<FnDecl*>(env->Search(field->getName()));
+    EnvVector *newEnv = EnvVector::GetProperScope(env, base);
+
+    
+
+    if (newEnv == NULL) {
+        ReportError::FieldNotFoundInBase(field, base->CheckType(env));
+        List<Type*> *actuals_t = new List<Type*>;
+        for (int i = 0; i < actuals->NumElements(); i++) {
+            actuals_t->Append(actuals->Nth(i)->CheckType(env));
+        }
+        return Type::errorType;
+        
+    }
+
+    FnDecl *f = dynamic_cast<FnDecl*>(newEnv->Search(field->getName()));
     if (f == NULL) {
         ReportError::IdentifierNotDeclared(field, LookingForFunction);
         return Type::errorType;

@@ -32,6 +32,8 @@ class EnvVector {
         Decl* GetTypeDecl(Identifier *t);
         
         static EnvVector *GetProperScope(EnvVector *env, Expr *e);
+
+        void PrintScope();
 };
 
 

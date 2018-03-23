@@ -22,7 +22,7 @@ do
         out="$file.out"
         echo -e -n "$file: "
 
-        d="$(./dcc < $file 2>&1 | diff - $out 2>&1)"
+        d="$(./dcc < $file 2>&1 | diff - $out -q 2>&1)"
         if [ "$d" != "" ]
         then
             echo -e "\e[91mTest fail\e[39m"

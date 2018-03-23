@@ -3,6 +3,7 @@
  * Implementation of Decl node classes.
  */
 #include "ast_decl.h"
+#include "inheritance_hierarchy.h"
 #include "ast_type.h"
 #include "ast_stmt.h"
 #include "errors.h"
@@ -62,12 +63,15 @@ void ClassDecl::CheckExtends() {
     }
     
     ClassDecl *e = dynamic_cast<ClassDecl*>(env->Search(extends->getName()));
-    if (e == NULL)
+    if (e == NULL) {
         return;
+    }
         
     e->CheckInheritance();
     EnvVector *parentScope = e->GetEnv();
     env->SetParent(parentScope);
+    Type::hierarchy->AddClassInheritance(e->GetType(), this->GetType());
+
     for (int i = 0; i < members->NumElements(); i++) {
         Decl* n = members->Nth(i);
         Decl* d = parentScope->SearchInScope(n);
@@ -83,9 +87,7 @@ void ClassDecl::CheckExtends() {
             FnDecl* nfn = dynamic_cast<FnDecl*>(n);
             if(!nfn->MatchesOther(dfn)) {
                 ReportError::OverrideMismatch(nfn);
-            } else {
-                nfn->CheckFunctions();
-            }
+            } 
         } else {
             ReportError::DeclConflict(n, d);
         }
@@ -119,7 +121,8 @@ void ClassDecl::CheckInheritance() {
     for (int i = 0; i < members->NumElements(); i++) {
         Decl* n = members->Nth(i);
         env->InsertIfNotExists(n);
-        n->Check();
+        n->SetEnv(env);
+        //n->Check();
     }
     
     // build extends symbol table 
@@ -130,6 +133,16 @@ void ClassDecl::CheckInheritance() {
     BuildInterface();
 }
 
+void ClassDecl::CheckFunctions() {
+
+    for (int i = 0; i < members->NumElements(); i++) {
+        members->Nth(i)->Check();
+        //if (FnDecl* dfn = dynamic_cast<FnDecl*>(members->Nth(i))) {
+        //    dfn->Check();
+        //}
+    }
+    
+}
 
 void ClassDecl::CheckImplements() {
         // build interface methods

@@ -6,6 +6,7 @@
 #include "ast_decl.h"
 #include "errors.h"
 #include <string.h>
+#include "inheritance_hierarchy.h"
 
  
 /* Class constants
@@ -23,6 +24,9 @@ Type *Type::boolType   = new Type("bool");
 Type *Type::nullType   = new Type("null");
 Type *Type::stringType = new Type("string");
 Type *Type::errorType  = new Type("error"); 
+
+
+InheritanceHierarchy *Type::hierarchy = new InheritanceHierarchy();
 
 Type::Type(const char *n) {
     Assert(n);
@@ -44,7 +48,7 @@ NamedType::NamedType(Identifier *i) : Type(*i->GetLocation()) {
 
 bool NamedType::IsConvertableTo(Type *other) {
     // no polymorphism atm
-    return IsEquivalentTo(other);
+    return IsEquivalentTo(other) || Type::hierarchy->IsSubClassOf(other, this);
 }
 
 char* NamedType::getName() {
