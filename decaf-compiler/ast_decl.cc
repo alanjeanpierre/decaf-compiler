@@ -83,6 +83,8 @@ void ClassDecl::CheckExtends() {
             FnDecl* nfn = dynamic_cast<FnDecl*>(n);
             if(!nfn->MatchesOther(dfn)) {
                 ReportError::OverrideMismatch(nfn);
+            } else {
+                nfn->CheckFunctions();
             }
         } else {
             ReportError::DeclConflict(n, d);
@@ -237,6 +239,7 @@ void FnDecl::Check() {
         env->InsertIfNotExists(formals->Nth(i));
         formals->Nth(i)->Check();
     }
+    body->SetEnv(env);
     body->Check();
 
 }
@@ -248,4 +251,12 @@ void FnDecl::CheckScope(EnvVector *env) {
 
 void FnDecl::CheckFunctions() {
     body->Check();
+}
+
+Type *ClassDecl::GetType() {
+    return new NamedType(id);
+}
+
+Type *InterfaceDecl::GetType() {
+    return new NamedType(id);
 }

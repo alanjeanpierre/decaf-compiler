@@ -37,6 +37,7 @@ class Decl : public Node
     virtual void CheckImplements() {;}
     virtual void CheckFunctions() {;}
     virtual void CheckTypes() {;}
+    virtual Type *GetType() { return NULL; }
     bool CheckName(Decl* other) { return strcmp(getName(), other->getName()) == 0;}
 };
 
@@ -55,6 +56,7 @@ class VarDecl : public Decl
     void CheckImplements() {;}
     void CheckFunctions() {;}
     void CheckTypes();
+    Type *GetType() { return type; }
 };
 
 class ClassDecl : public Decl 
@@ -81,6 +83,7 @@ class ClassDecl : public Decl
 
     void CheckExtends();
     void BuildInterface();
+    Type *GetType();
 };
 
 class InterfaceDecl : public Decl 
@@ -99,6 +102,7 @@ class InterfaceDecl : public Decl
     void CheckImplements() {;}
     void CheckFunctions() {;}
     void CheckTypes() {;}
+    Type *GetType();
 };
 
 class FnDecl : public Decl 
@@ -119,6 +123,7 @@ class FnDecl : public Decl
     void CheckImplements() {;}
     void CheckTypes();
     void CheckFunctions();
+    Type *GetType() { return returnType; }
 };
 
 #endif

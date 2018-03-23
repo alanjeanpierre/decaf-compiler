@@ -28,11 +28,21 @@ Type::Type(const char *n) {
     Assert(n);
     typeName = strdup(n);
 }
+
+bool Type::IsConvertableTo(Type *other) {
+    return IsEquivalentTo(other) || IsEquivalentTo(Type::errorType)
+    || (IsEquivalentTo(Type::nullType) && dynamic_cast<NamedType*>(other) != NULL);
+}
 	
 NamedType::NamedType(Identifier *i) : Type(*i->GetLocation()) {
     Assert(i != NULL);
     (id=i)->SetParent(this);
 } 
+
+bool NamedType::IsConvertableTo(Type *other) {
+    // no polymorphism atm
+    return IsEquivalentTo(other);
+}
 
 char* NamedType::getName() {
     return id->getName();
@@ -55,6 +65,10 @@ bool NamedType::IsEquivalentTo(Type *other) {
 ArrayType::ArrayType(yyltype loc, Type *et) : Type(loc) {
     Assert(et != NULL);
     (elemType=et)->SetParent(this);
+}
+
+bool ArrayType::IsConvertableTo(Type *other) {
+    return elemType->IsConvertableTo(other);
 }
 
 

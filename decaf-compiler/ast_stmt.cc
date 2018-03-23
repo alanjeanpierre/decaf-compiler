@@ -67,6 +67,7 @@ void StmtBlock::Check() {
     }
 
     for (int i = 0; i < stmts->NumElements(); i++) {
+        stmts->Nth(i)->SetEnv(env);
         stmts->Nth(i)->Check();
     }
 
@@ -86,11 +87,27 @@ ForStmt::ForStmt(Expr *i, Expr *t, Expr *s, Stmt *b): LoopStmt(t, b) {
 
 void ForStmt::Check() {
     env = env->Push();
+    if (init) {
+        init->SetEnv(env);
+        init->Check();
+    }
+    test->SetEnv(env);
+    if (!test->CheckType(env)->IsConvertableTo(Type::boolType))
+        ReportError::TestNotBoolean(test);
+    if (step) {
+        step->SetEnv(env);
+        step->Check();
+    }
+    body->SetEnv(env);
     body->Check();
 }
 
 void WhileStmt::Check() {
     env = env->Push();
+    test->SetEnv(env);
+    if (!test->CheckType(env)->IsConvertableTo(Type::boolType))
+        ReportError::TestNotBoolean(test);
+    body->SetEnv(env);
     body->Check();
 }
 
@@ -102,7 +119,16 @@ IfStmt::IfStmt(Expr *t, Stmt *tb, Stmt *eb): ConditionalStmt(t, tb) {
 
 void IfStmt::Check() {
     env = env->Push();
+    test->SetEnv(env);
+    if (!test->CheckType(env)->IsConvertableTo(Type::boolType))
+        ReportError::TestNotBoolean(test);
+    
+    body->SetEnv(env);
     body->Check();
+    if (elseBody) {
+        elseBody->SetEnv(env);
+        elseBody->Check();
+    }
 }
 
 ReturnStmt::ReturnStmt(yyltype loc, Expr *e) : Stmt(loc) { 
