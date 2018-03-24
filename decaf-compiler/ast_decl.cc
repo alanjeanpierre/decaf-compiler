@@ -59,7 +59,7 @@ void ClassDecl::CheckExtends() {
 
     if (!env->TypeExists(extends->getID())) {
         ReportError::IdentifierNotDeclared(extends->getID(), LookingForClass);
-        env->AddType(new ClassDecl(extends->getID(), NULL, NULL, NULL));
+        env->AddType(new ClassDecl(extends->getID(), NULL, new List<NamedType*>, new List<Decl*>));
     }
     
     ClassDecl *e = dynamic_cast<ClassDecl*>(env->Search(extends->getName()));
@@ -99,7 +99,7 @@ void ClassDecl::BuildInterface() {
     for (int i = 0; i < implements->NumElements(); i++) {
         if(!env->TypeExists(implements->Nth(i)->getID())) {
             ReportError::IdentifierNotDeclared(implements->Nth(i)->getID(), LookingForInterface);
-            env->AddType(new InterfaceDecl(implements->Nth(i)->getID(), NULL));
+            env->AddType(new InterfaceDecl(implements->Nth(i)->getID(), new List<Decl*>));
         } else {    
             InterfaceDecl *impl = dynamic_cast<InterfaceDecl*>(env->Search(implements->Nth(i)->getName()));
             if (impl) {
