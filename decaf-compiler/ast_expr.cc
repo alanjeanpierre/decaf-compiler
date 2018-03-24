@@ -249,7 +249,7 @@ void NewExpr::Check() {
 }
 
 Type *NewExpr::CheckType(EnvVector *env) {
-    if (env->TypeExists(cType->getID())) {
+    if (env->TypeExists(cType->getID()) && dynamic_cast<ClassDecl*>(env->GetTypeDecl(cType->getID())) != NULL) {
         return cType;
     }
 
@@ -277,6 +277,12 @@ Type *NewArrayExpr::CheckType(EnvVector *env) {
     if (!size->CheckType(env)->IsConvertableTo(Type::intType))
         ReportError::NewArraySizeNotInteger(size);
     
+    if (NamedType *t = dynamic_cast<NamedType*>(elemType)) {
+        if (!env->TypeExists(t->getID())) {
+            ReportError::IdentifierNotDeclared(t->getID(), LookingForType);
+            return new ArrayType(*location, Type::errorType);    
+        }
+    }
     return new ArrayType(*location, elemType);
 }
 

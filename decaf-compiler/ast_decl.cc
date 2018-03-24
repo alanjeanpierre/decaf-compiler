@@ -99,7 +99,7 @@ void ClassDecl::BuildInterface() {
     for (int i = 0; i < implements->NumElements(); i++) {
         if(!env->TypeExists(implements->Nth(i)->getID())) {
             ReportError::IdentifierNotDeclared(implements->Nth(i)->getID(), LookingForInterface);
-            env->AddType(new InterfaceDecl(implements->Nth(i)->getID(), new List<Decl*>));
+            //env->AddType(new InterfaceDecl(implements->Nth(i)->getID(), new List<Decl*>));
         } else {    
             InterfaceDecl *impl = dynamic_cast<InterfaceDecl*>(env->Search(implements->Nth(i)->getName()));
             if (impl) {
