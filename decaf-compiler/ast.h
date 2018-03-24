@@ -46,6 +46,7 @@ class Node
   public:
     Node(yyltype loc);
     Node();
+    virtual ~Node() {}
 
     void SetEnv(EnvVector *env);
     EnvVector *GetEnv() { return env; }

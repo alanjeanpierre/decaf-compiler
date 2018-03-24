@@ -116,6 +116,7 @@ void ClassDecl::CheckInheritance() {
     checked = true;
 
     env = parent->GetEnv()->Push();
+    env->SetScopeLevel(ClassScope);
 
     // build class scope
     for (int i = 0; i < members->NumElements(); i++) {

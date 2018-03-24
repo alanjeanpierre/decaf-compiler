@@ -7,6 +7,7 @@ Hashtable<Decl*> *EnvVector::types = new Hashtable<Decl*>;
 EnvVector::EnvVector() {
 
     env = new Hashtable<Decl*>;
+    scope = GlobalScope;
     parent = NULL;
 }
 
@@ -17,11 +18,16 @@ void EnvVector::SetParent(EnvVector *other) {
 EnvVector* EnvVector::Push() {
     EnvVector *child = new EnvVector();
     child->parent = this;
+    child->scope = scope;
     return child;
 }
 
 EnvVector* EnvVector::Pop() {
     return parent;
+}
+
+void EnvVector::SetScopeLevel(ScopeLevel s) {
+    scope = s;
 }
 
 Decl* EnvVector::SearchInScope(Decl* id) {
@@ -101,7 +107,7 @@ EnvVector *EnvVector::GetProperScope(EnvVector *env, Expr *e) {
 
     // if this
     if (This* t = dynamic_cast<This*>(e)) {
-        return e->GetParent()->GetEnv();
+        t->CheckType(env);
     }
 
     // if var.field

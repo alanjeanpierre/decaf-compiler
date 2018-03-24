@@ -176,10 +176,22 @@ void FieldAccess::Check() {
 }
 
 Type *FieldAccess::CheckType(EnvVector *env) {
+
+    if (base == NULL) { // single field access
+        //return env->GetTypeDecl(field)->GetType();
+        return env->Search(field->getName())->GetType();
+    }
+
     EnvVector *newEnv = EnvVector::GetProperScope(env, base);
 
     if (newEnv == NULL) {
         ReportError::FieldNotFoundInBase(field, base->CheckType(env));
+        return Type::errorType;
+    }
+
+
+    if (!env->IsInClassScope()) {
+        ReportError::InaccessibleField(field, base->CheckType(env));
         return Type::errorType;
     }
 
@@ -263,6 +275,33 @@ void NewArrayExpr::Check() {
 
 void This::Check() {
     CheckType(env);
+}
+
+Decl *This::GetClass() {
+    Node *t = this;
+    while(t) {
+        ClassDecl *c = dynamic_cast<ClassDecl*>(t);
+        if (c != NULL) {
+            return c;
+        }
+        t = t->GetParent();
+    }
+
+    return NULL;
+}
+
+Type *This::CheckType(EnvVector *env) {
+    if (!env->IsInClassScope()) {
+        ReportError::ThisOutsideClassScope(this);
+        return Type::errorType;
+    }
+
+    
+    Decl *class_ = GetClass();
+    if (class_) 
+        return class_->GetType();
+
+    return Type::errorType;
 }
 
 void ReadIntegerExpr::Check() {

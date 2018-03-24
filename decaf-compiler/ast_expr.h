@@ -183,7 +183,8 @@ class This : public Expr
     This(yyltype loc) : Expr(loc) {}
     void Check(EnvVector *env) {;}
     void Check();
-    Type *CheckType(EnvVector *env) { return NULL; }
+    Type *CheckType(EnvVector *env);
+    Decl *GetClass();
 };
 
 class ArrayAccess : public LValue 

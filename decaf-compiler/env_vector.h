@@ -7,12 +7,16 @@
 
 class Expr;
 
+typedef enum { GlobalScope, ClassScope} ScopeLevel;
+
 class EnvVector {
 
     private:
         Hashtable<Decl*> *env;
         EnvVector *parent;
         static Hashtable<Decl*> *types;
+        ScopeLevel scope;
+
     
     public:
         EnvVector();
@@ -33,6 +37,8 @@ class EnvVector {
         
         static EnvVector *GetProperScope(EnvVector *env, Expr *e);
 
+        void SetScopeLevel(ScopeLevel s);
+        bool IsInClassScope() { return scope == ClassScope; }
         void PrintScope();
 };
 
