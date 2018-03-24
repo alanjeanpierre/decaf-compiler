@@ -107,7 +107,7 @@ EnvVector *EnvVector::GetProperScope(EnvVector *env, Expr *e) {
 
     // if this
     if (This* t = dynamic_cast<This*>(e)) {
-        t->CheckType(env);
+        return t->GetClass()->GetEnv();
     }
 
     // if var.field
