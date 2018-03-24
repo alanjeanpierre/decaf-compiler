@@ -37,7 +37,7 @@ bool Type::IsConvertableTo(Type *other) {
     if (dynamic_cast<ArrayType*>(other) != NULL)
         return false;
 
-    return IsEquivalentTo(other) || IsEquivalentTo(Type::errorType)
+    return IsEquivalentTo(other) || (IsEquivalentTo(Type::errorType) || other->IsEquivalentTo(Type::errorType))
     || (IsEquivalentTo(Type::nullType) && dynamic_cast<NamedType*>(other) != NULL);
 }
 	
