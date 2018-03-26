@@ -1,26 +1,10 @@
 /* File: parser.y
  * --------------
  * Yacc input file to generate the parser for the compiler.
- * pp3: add parser rules and tree construction from your pp2. You should
- *      not need to make any significant changes in the parser itself. After
- *      parsing completes, if no syntax errors were found, the parser calls
- *      program->Check() to kick off the semantic analyzer pass. The
- *      interesting work happens during the tree traversal.
- *
- * pp2: your job is to write a parser that will construct the parse tree
- *      and if no parse errors were found, print it.  The parser should 
- *      accept the language as described in specification, and as augmented 
- *      in the pp2 handout.
  */
 
 %{
 
-/* Just like lex, the text within this first region delimited by %{ and %}
- * is assumed to be C/C++ code and will be copied verbatim to the y.tab.c
- * file ahead of the definitions of the yyparse() function. Add other header
- * file inclusions or C++ variable declarations/prototypes that are needed
- * by your code here.
- */
 #include "scanner.h" // for yylex
 #include "parser.h"
 #include "errors.h"
@@ -29,19 +13,9 @@ void yyerror(const char *msg); // standard error-handling routine
 
 %}
 
-/* The section before the first %% is the Definitions section of the yacc
- * input file. Here is where you declare tokens and types, add precedence
- * and associativity options, and so on.
- */
  
 /* yylval 
  * ------
- * Here we define the type of the yylval global variable that is used by
- * the scanner to store attibute information about the token just scanned
- * and thus communicate that information to the parser. 
- *
- * pp2: You will need to add new fields to this union as you add different 
- *      attributes to your non-terminal symbols.
  */
 %union {
     int integerConstant;
@@ -51,49 +25,22 @@ void yyerror(const char *msg); // standard error-handling routine
     char identifier[MaxIdentLen+1]; // +1 for terminating null
     Decl *decl;
     List<Decl*> *declList;
+    Type *type;
+    NamedType *cType;
+    List<NamedType*> *cTypeList;
+    FnDecl *fDecl;
     VarDecl *var;
-    FnDecl  *func;
-    Type *T;
-    List<VarDecl*> *formallist;
-    List<VarDecl*> *formals;
-    List<VarDecl*> *vlist;
-    List<Stmt*>    *stmtlist;
-    StmtBlock *stmtblck;
-    Stmt      *stmt;
-    VarDecl *v;
+    List<VarDecl*> *varList;
     Expr *expr;
-    ConditionalStmt *cond;
-    IfStmt *ifstmt;
-    WhileStmt *whilestmt;
-    ForStmt *forstmt;
-    LValue *L;
-    ArrayAccess *arraccess;
-    FieldAccess *field;
-    Identifier *id;
-    Expr *constant;
-    Expr *opt;
-    List<Expr*> *exprlist;
-    ClassDecl *classdecl;
-    List<Decl*> *flist;
-    Decl *classfield;   
-    NamedType *ext;
-    List<NamedType*> *implList;   
-    List<NamedType*> *impl;
-    Call *call;
-    List<Expr*> *actList;
-    List<Expr*> *act;
-    InterfaceDecl *interfacedecl;
-    List<Decl*> *intfield;
-    FnDecl *proto;
-
+    List<Expr*> *exprList;
+    Stmt *stmt;
+    List<Stmt*> *stmtList;
+    LValue *lvalue;
 }
 
 
 /* Tokens
  * ------
- * Here we tell yacc about all the token types that we are using.
- * Yacc will assign unique numbers to these and export the #define
- * in the generated y.tab.h header file.
  */
 %token   T_Void T_Bool T_Int T_Double T_String T_Class 
 %token   T_LessEqual T_GreaterEqual T_Equal T_NotEqual T_Dims
@@ -107,271 +54,235 @@ void yyerror(const char *msg); // standard error-handling routine
 %token   <doubleConstant> T_DoubleConstant
 %token   <boolConstant> T_BoolConstant
 
-%right T_Then T_Else
-%left '='
-%left T_Or
-%left T_And
-%left T_Equal T_NotEqual
-%nonassoc '<' '>' T_GreaterEqual T_LessEqual
-%left '+' '-'
-%left '*' '/' '%'
-%right '!' NEG
-%nonassoc '[' '.'
-
-
-
-
 
 /* Non-terminal types
  * ------------------
- * In order for yacc to assign/access the correct field of $$, $1, we
- * must to declare which field is appropriate for the non-terminal.
- * As an example, this first type declaration establishes that the DeclList
- * non-terminal uses the field named "declList" in the yylval union. This
- * means that when we are setting $$ for a reduction for DeclList ore reading
- * $n which corresponds to a DeclList nonterminal we are accessing the field
- * of the union named "declList" which is of type List<Decl*>.
- * pp2: You'll need to add many of these of your own.
  */
-%type <declList>  DeclList 
-%type <decl>      Decl
-%type <var>       VarDecl
-%type <func>      FnDecl
-%type <T>         Type
-%type <v>         Variable
-%type <vlist>     VarDeclList
-%type <formals>   Formals
-%type <stmtblck>  StmtBlck
-%type <formallist> FormalList
-%type <stmt>      Stmt
-%type <stmtlist>  StmtList
-%type <expr>      Expr
-%type <cond>      CondStmt
-%type <ifstmt>        IfStmt
-%type <forstmt>       ForStmt
-%type <whilestmt>     WhileStmt
-%type <L>         LValue
-%type <arraccess> ArrayAccess
-%type <field>     FieldAccess
-%type <id>         ID
-%type <constant>        Constant
-%type <opt>      OptionalExpr
-%type <exprlist> ExprList
-%type <classdecl> ClassDecl
-%type <flist>     FieldList
-%type <classfield>     Field
-%type <ext>       Ext
-%type <impl>      Impl
-%type <implList>  ImplList
-%type <call>      Call
-%type <actList>   ActualList
-%type <act>       Actuals
-%type <interfacedecl> InterfaceDecl
-%type <intfield>  InterfaceField
-%type <proto> Prototype
+%type <expr>      Constant Expr Call OptExpr
+%type <lvalue>    LValue
+%type <type>      Type 
+%type <cType>     OptExt 
+%type <cTypeList> OptImpl ImpList
+%type <decl>      ClassDecl Decl Field IntfDecl
+%type <fDecl>     FnDecl FnHeader
+%type <declList>  FieldList DeclList IntfList
+%type <var>       Variable VarDecl
+%type <varList>   Formals FormalList VarDecls
+%type <exprList>  Actuals ExprList
+%type <stmt>      Stmt StmtBlock OptElse
+%type <stmtList>  StmtList
 
+  
+/* Precedence and associativity
+ * ----------------------------
+ * Here we establish the precedence and associativity of the
+ * tokens as needed to resolve conflicts and remove ambiguity.
+ */
+%left     '='
+%left      T_Or
+%left      T_And 
+%nonassoc  T_Equal T_NotEqual
+%nonassoc  '<' '>' T_LessEqual T_GreaterEqual
+%left      '+' '-'
+%left      '*' '/' '%'  
+%nonassoc  T_UnaryMinus '!' 
+%nonassoc  '.' '['
+%nonassoc  T_Lower_Than_Else
+%nonassoc  T_Else
 
 %%
 /* Rules
  * -----
- * All productions and actions should be placed between the start and stop
- * %% markers which delimit the Rules section.
 	 
  */
 Program   :    DeclList            { 
                                       @1; 
-                                      /* pp2: The @1 is needed to convince 
-                                       * yacc to set up yylloc. You can remove 
-                                       * it once you have other uses of @n*/
                                       Program *program = new Program($1);
                                       // if no errors, advance to next phase
                                       if (ReportError::NumErrors() == 0) 
-                                          program->Check();
+                                          program->Check(); 
                                     }
           ;
+
 
 DeclList  :    DeclList Decl        { ($$=$1)->Append($2); }
           |    Decl                 { ($$ = new List<Decl*>)->Append($1); }
           ;
 
-Decl      :    VarDecl               { $$ = $1;}
-          |    FnDecl                { $$ = $1; }
-          |    ClassDecl             { $$ = $1; }
-          |    InterfaceDecl         { $$ = $1; }
-	            ;
+Decl      :    ClassDecl
+          |    FnDecl               { $$=$1; }
+          |    VarDecl              { $$=$1; }
+          |    IntfDecl 
+          ;
 
-VarDeclList :  VarDeclList VarDecl { ($$ = $1)->Append($2);}
-            |  VarDecl         { ($$ = new List<VarDecl*>)->Append($1);}
+VarDecl   :    Variable ';' 
+          ;
+ 
+Variable  :    Type T_Identifier    { $$ = new VarDecl(new Identifier(@2, $2), $1); }
+          ;
+
+Type      :    T_Int                { $$ = Type::intType; }
+          |    T_Bool               { $$ = Type::boolType; }
+          |    T_String             { $$ = Type::stringType; }
+          |    T_Double             { $$ = Type::doubleType; }
+          |    T_Identifier         { $$ = new NamedType(new Identifier(@1,$1)); }
+          |    Type T_Dims          { $$ = new ArrayType(Join(@1, @2), $1); }
+          ;
+
+IntfDecl  :    T_Interface T_Identifier '{' IntfList '}' 
+                                    { $$ = new InterfaceDecl(new Identifier(@2, $2), $4); }
+          ; 
+
+IntfList  :    IntfList FnHeader ';'
+                                    { ($$=$1)->Append($2); }
+          |    /* empty */          { $$ = new List<Decl*>(); }
+          ;
+
+ClassDecl :    T_Class T_Identifier OptExt OptImpl '{' FieldList '}'
+                                    { $$ = new ClassDecl(new Identifier(@2, $2), $3, $4, $6); }
+          ; 
+                
+OptExt    :    T_Extends T_Identifier    
+                                    { $$ = new NamedType(new Identifier(@2, $2)); }
+          |    /* empty */          { $$ = NULL; }
+          ;
+
+OptImpl   :    T_Implements ImpList 
+                                    { $$ = $2; }
+          |    /* empty */          { $$ = new List<NamedType*>; }
+          ;
+
+ImpList   :    ImpList ',' T_Identifier    
+                                    { ($$=$1)->Append(new NamedType(new Identifier(@3, $3))); }
+          |    T_Identifier         { ($$=new List<NamedType*>)->Append(new NamedType(new Identifier(@1, $1))); }
+          ;
+
+FieldList :    FieldList Field      { ($$=$1)->Append($2); }
+          |    /* empty */          { $$ = new List<Decl*>(); }
+          ;
+
+Field     :    VarDecl              { $$ = $1; }
+          |    FnDecl               { $$ = $1; }
+          ;
           
-VarDecl   :    Variable ';' { $$ = $1; }
-            ;
 
-Variable  :    Type ID { $$ = new VarDecl( $2, $1);}
-
-
-
-Type      :    T_Int {$$ = Type::intType ;}
-          |    T_Double {$$ = Type::doubleType ;}
-          |    T_Bool {$$ = Type::boolType ;}
-          |    T_String {$$ = Type::stringType ;}
-          |    Type T_Dims { $$ = new ArrayType(@1, $1);}
-          |    ID { $$ = new NamedType($1);}
+FnHeader  :    Type T_Identifier '(' Formals ')'  
+                                    { $$ = new FnDecl(new Identifier(@2, $2), $1, $4); }
+          |    T_Void T_Identifier '(' Formals ')' 
+                                    { $$ = new FnDecl(new Identifier(@2, $2), Type::voidType, $4); }
           ;
 
-ID        : T_Identifier { $$ = new Identifier(@1, $1);}
-
-FnDecl    :    Type ID '(' Formals ')' StmtBlck { $$ = new FnDecl($2, $1, $4);
-                                                            $$->SetFunctionBody($6);
-                                                            }
-          |    T_Void ID '(' Formals ')' StmtBlck { $$ = new FnDecl($2, Type::voidType, $4);
-                                                            $$->SetFunctionBody($6);
-                                                            }
+Formals   :    FormalList           { $$ = $1; }
+          |    /* empty */          { $$ = new List<VarDecl*>; }
           ;
 
-Formals   :    FormalList   { $$ = $1; }
-          |    /* empty */ {$$ = new List<VarDecl*>;}
+FormalList:    FormalList ',' Variable  
+                                    { ($$=$1)->Append($3); }
+          |    Variable             { ($$ = new List<VarDecl*>)->Append($1); }
           ;
 
-FormalList   :    FormalList ',' Variable { ($$=$1)->Append($3);}
-             |    Variable { ($$ = new List<VarDecl*>)->Append($1);}
-             ;
-
-ClassDecl : T_Class ID Ext Impl '{' FieldList '}' {$$ = new ClassDecl($2, $3, $4, $6);}
-
-Ext       : T_Extends ID { $$ = new NamedType($2);}
-          | /* empty */ { $$ = NULL; }
+FnDecl    :    FnHeader StmtBlock   { ($$=$1)->SetFunctionBody($2); }
           ;
 
-Impl      : T_Implements ImplList { $$ = $2; }
-          | /* empty */ { $$ = new List<NamedType*>; }
+StmtBlock :    '{' VarDecls StmtList '}' 
+                                    { $$ = new StmtBlock($2, $3); }
           ;
 
-ImplList  : ImplList ',' ID { ($$=$1)->Append(new NamedType($3));}
-          | ID {($$=new List<NamedType*>)->Append(new NamedType($1));}
+VarDecls  :    VarDecls VarDecl     { ($$=$1)->Append($2); }
+          |    /* empty */          { $$ = new List<VarDecl*>; }
           ;
 
-FieldList : FieldList Field { ($$ = $1)->Append($2);}
-          | /* empty */ { $$ = new List<Decl*>;}
+StmtList  :    Stmt StmtList        { $$ = $2; $$->InsertAt($1, 0); }
+          |    /* empty */          { $$ = new List<Stmt*>; }
           ;
 
-Field     : VarDecl { $$ = $1; }
-          | FnDecl {$$ = $1;}
+Stmt      :    OptExpr ';'          { $$ = $1; }
+          |    StmtBlock
+          |    T_If '(' Expr ')' Stmt OptElse 
+                                    { $$ = new IfStmt($3, $5, $6); }
+          |    T_While '(' Expr ')' Stmt 
+                                    { $$ = new WhileStmt($3, $5); }
+          |    T_For '(' OptExpr ';' Expr ';' OptExpr ')' Stmt 
+                                    { $$ = new ForStmt($3, $5, $7, $9); } 
+          |    T_Return Expr ';'      
+                                    { $$ = new ReturnStmt(@2, $2); }
+          |    T_Return ';'      
+                                    { $$ = new ReturnStmt(@1, new EmptyExpr()); }
+          |    T_Print '(' ExprList ')' ';'  
+                                    { $$ = new PrintStmt($3); }
+          |    T_Break ';'          { $$ = new BreakStmt(@1); }
           ;
 
-InterfaceDecl : T_Interface ID '{' InterfaceField '}' {$$ = new InterfaceDecl($2, $4);}
-
-InterfaceField : InterfaceField Prototype { ($$=$1)->Append($2); }
-               | /* empty */ { $$ = new List<Decl*>;}
-
-Prototype : Type ID '(' Formals ')' ';' { $$ = new FnDecl($2, $1, $4);}
-          | T_Void ID '(' Formals ')' ';' { $$ = new FnDecl($2, Type::voidType, $4);}
-
-
-StmtBlck  :   '{' VarDeclList StmtList '}' { $$ = new StmtBlock($2, $3);}
-          |   '{' StmtList '}' {$$ = new StmtBlock(new List<VarDecl*>, $2); }
-          |   '{' VarDeclList '}' { $$ = new StmtBlock($2, new List<Stmt*>);}
-          |   '{' '}' { $$ = new StmtBlock(new List<VarDecl*>, new List<Stmt*>);}
-
-StmtList  :  StmtList Stmt { ($$ = $1)->Append($2);}
-          |  Stmt { ($$ = new List<Stmt*>)->Append($1);}
-
-Stmt      :   OptionalExpr ';' { $$ = $1;}
-          |   CondStmt { $$ = $1;}
-          |   StmtBlck { $$ = $1;}
-          |   T_Break ';' { $$ = new BreakStmt(@1);}
-          |   T_Return OptionalExpr ';' {$$ = new ReturnStmt(@1, $2);}
-          |   T_Print '(' ExprList ')' ';' { $$ = new PrintStmt($3); }
+LValue    :    T_Identifier          { $$ = new FieldAccess(NULL, new Identifier(@1, $1)); }
+          |    Expr '.' T_Identifier { $$ = new FieldAccess($1, new Identifier(@3, $3)); } 
+          |    Expr '[' Expr ']'     { $$ = new ArrayAccess(Join(@1, @4), $1, $3); }
           ;
 
-CondStmt  :   IfStmt   { $$ = $1;}
-          |   WhileStmt {$$ = $1;}
-          |   ForStmt  { $$ = $1;}
+Call      :    T_Identifier '(' Actuals ')' 
+                                    { $$ = new Call(Join(@1,@4), NULL, new Identifier(@1,$1), $3); }
+          |    Expr '.' T_Identifier '(' Actuals ')' 
+                                    { $$ = new Call(Join(@1,@6), $1, new Identifier(@3,$3), $5); }
           ;
 
-IfStmt    :   T_If '(' Expr ')' Stmt T_Else Stmt { $$ = new IfStmt($3, $5, $7);}
-          |   T_If '(' Expr ')' Stmt %prec T_Then {$$ = new IfStmt($3, $5, NULL); }
+OptExpr   :    Expr                 { $$ = $1; }
+          |    /* empty */          { $$ = new EmptyExpr(); }
           ;
 
-WhileStmt :   T_While '(' Expr ')' Stmt {$$ = new WhileStmt($3, $5);}
-            ;
-
-ForStmt   :   T_For '(' OptionalExpr ';' Expr ';' OptionalExpr ')' Stmt {$$ = new ForStmt($3, $5, $7, $9);}
-            ;
-
-ExprList  :  ExprList ',' Expr { ($$=$1)->Append($3);}
-          |  Expr { ($$ = new List<Expr*>)->Append($1);}
-
-OptionalExpr : /* empty */ { $$ = new EmptyExpr();}
-             | Expr { $$ = $1;}
-             ;
-
-Expr      :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3);}
-          |  Constant { $$ = $1;}   
-          |  LValue { $$ = $1;}
-          |  T_This { $$ = new This(@1);}
-          |  Call { $$ = $1; }  
-          |  '(' Expr ')' { $$ = $2;}
-          |  Expr '+' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "+"), $3);}
-          |  Expr '-' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "-"), $3);}
-          |  Expr '*' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "*"), $3) ;}
-          |  Expr '/' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "/"), $3);}
-          |  Expr '%' Expr { $$ = new ArithmeticExpr($1, new Operator(@2, "%"), $3);}
-          |  '-' Expr %prec NEG { $$ = new ArithmeticExpr( new Operator(@1, "-"), $2);}
-          |  Expr '>' Expr { $$ = new RelationalExpr($1, new Operator(@2, ">"), $3);}
-          |  Expr '<' Expr { $$ = new RelationalExpr($1, new Operator(@2, "<"), $3);}
-          |  Expr T_GreaterEqual Expr { $$ = new RelationalExpr($1, new Operator(@2, ">="), $3);}
-          |  Expr T_LessEqual Expr {$$ = new RelationalExpr($1, new Operator(@2, "<="), $3);}
-          |  Expr T_Equal Expr { $$ = new EqualityExpr($1, new Operator(@2, "=="), $3);}
-          |  Expr T_NotEqual Expr { $$ = new EqualityExpr($1, new Operator(@2, "!="), $3);}
-          |  Expr T_And Expr { $$ = new LogicalExpr($1, new Operator(@2, "&&"), $3);}
-          |  Expr T_Or Expr { $$ = new LogicalExpr($1, new Operator(@2, "||"), $3);}
-          | '!' Expr { $$ = new LogicalExpr(new Operator(@1, "!"), $2);}
-          |  T_ReadInteger '(' ')' { $$ = new ReadIntegerExpr(Join(@1, @3));}
-          |  T_ReadLine '(' ')' { $$ = new ReadLineExpr(Join(@1, @3)); }
-          |  T_New '(' ID ')' { $$ = new NewExpr(Join(@1, @4), new NamedType($3));}
-          |  T_NewArray '(' Expr ',' Type ')' { $$ = new NewArrayExpr(Join(@1, @6), $3, $5);}
+Expr      :    LValue               { $$ = $1; }
+          |    Call
+          |    Constant
+          |    LValue '=' Expr      { $$ = new AssignExpr($1, new Operator(@2,"="), $3); }
+          |    Expr '+' Expr        { $$ = new ArithmeticExpr($1, new Operator(@2, "+"), $3); }
+          |    Expr '-' Expr        { $$ = new ArithmeticExpr($1, new Operator(@2, "-"), $3); }
+          |    Expr '/' Expr        { $$ = new ArithmeticExpr($1, new Operator(@2,"/"), $3); }
+          |    Expr '*' Expr        { $$ = new ArithmeticExpr($1, new Operator(@2,"*"), $3); }
+          |    Expr '%' Expr        { $$ = new ArithmeticExpr($1, new Operator(@2,"%"), $3); }
+          |    Expr T_Equal Expr    { $$ = new EqualityExpr($1, new Operator(@2,"=="), $3); }
+          |    Expr T_NotEqual Expr { $$ = new EqualityExpr($1, new Operator(@2,"!="), $3); }
+          |    Expr '<' Expr        { $$ = new RelationalExpr($1, new Operator(@2,"<"), $3); }
+          |    Expr '>' Expr        { $$ = new RelationalExpr($1, new Operator(@2,">"), $3); }
+          |    Expr T_LessEqual Expr 
+                                    { $$ = new RelationalExpr($1, new Operator(@2,"<="), $3); }
+          |    Expr T_GreaterEqual Expr 
+                                    { $$ = new RelationalExpr($1, new Operator(@2,">="), $3); }
+          |    Expr T_And Expr      { $$ = new LogicalExpr($1, new Operator(@2,"&&"), $3); }
+          |    Expr T_Or Expr       { $$ = new LogicalExpr($1, new Operator(@2,"||"), $3); }
+          |    '(' Expr ')'         { $$ = $2; }
+          |    '-' Expr  %prec T_UnaryMinus 
+                                    { $$ = new ArithmeticExpr(new Operator(@1,"-"), $2); }
+          |    '!' Expr             { $$ = new LogicalExpr(new Operator(@1,"!"), $2); }
+          |    T_ReadInteger '(' ')'   
+                                    { $$ = new ReadIntegerExpr(Join(@1,@3)); }
+          |    T_ReadLine '(' ')'   { $$ = new ReadLineExpr(Join(@1,@3)); }
+          |    T_New '(' T_Identifier ')' 
+                                    { $$ = new NewExpr(Join(@1,@4),new NamedType(new Identifier(@3,$3))); }
+          |    T_NewArray '(' Expr ',' Type ')' 
+                                    { $$ = new NewArrayExpr(Join(@1,@6),$3, $5); }
+          |    T_This               { $$ = new This(@1); }
           ;
 
-LValue    :  ArrayAccess { $$ = $1; }
-          |  FieldAccess { $$ = $1; }
+Constant  :    T_IntConstant        { $$ = new IntConstant(@1,$1); }
+          |    T_BoolConstant       { $$ = new BoolConstant(@1,$1); }
+          |    T_DoubleConstant     { $$ = new DoubleConstant(@1,$1); }
+          |    T_StringConstant     { $$ = new StringConstant(@1,$1); }
+          |    T_Null               { $$ = new NullConstant(@1); }
           ;
 
-ArrayAccess : Expr '[' Expr ']' { $$ = new ArrayAccess(Join(@1, @4), $1, $3);}
+Actuals   :    ExprList             { $$ = $1; }
+          |    /* empty */          { $$ = new List<Expr*>; }
           ;
 
-FieldAccess : Expr '.' ID { $$ = new FieldAccess($1, $3);}
-            | ID { $$ = new FieldAccess(NULL, $1);}
-            ;
-
-Call      :  Expr '.' ID '(' Actuals ')' { $$ = new Call(Join(@1, @6), $1, $3, $5);}
-          |  ID '(' Actuals ')' { $$ = new Call(Join(@1, @4), NULL, $1, $3);}
+ExprList  :    ExprList ',' Expr    { ($$=$1)->Append($3); }
+          |    Expr                 { ($$ = new List<Expr*>)->Append($1); }
           ;
 
-Actuals   :  ActualList { $$ = $1; }
-          |  /* empty */ { $$ = new List<Expr*>;}
+OptElse   :    T_Else Stmt          { $$ = $2; }
+          |    /* empty */   %prec T_Lower_Than_Else 
+                                    { $$ = NULL; }
           ;
-
-ActualList : ActualList ',' Expr { ($$ = $1)->Append($3);}
-           | Expr { ($$ = new List<Expr*>)->Append($1);}
-
-
-Constant  : T_IntConstant { $$ = new IntConstant(@1, $1);}
-          | T_DoubleConstant { $$ = new DoubleConstant(@1, $1);}
-          | T_BoolConstant { $$ = new BoolConstant(@1, $1);}
-          | T_StringConstant { $$ = new StringConstant(@1, $1);}
-          | T_Null { $$ = new NullConstant(@1);}
-          ;
-
-
-
 
 %%
 
-/* The closing %% above marks the end of the Rules section and the beginning
- * of the User Subroutines section. All text from here to the end of the
- * file is copied verbatim to the end of the generated y.tab.c file.
- * This section is where you put definitions of helper functions.
- */
 
 /* Function: InitParser
  * --------------------
