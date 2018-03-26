@@ -326,25 +326,25 @@ Expr      :  LValue '=' Expr { $$ = new AssignExpr($1, new Operator(@2, "="), $3
           |  Expr T_And Expr { $$ = new LogicalExpr($1, new Operator(@2, "&&"), $3);}
           |  Expr T_Or Expr { $$ = new LogicalExpr($1, new Operator(@2, "||"), $3);}
           | '!' Expr { $$ = new LogicalExpr(new Operator(@1, "!"), $2);}
-          |  T_ReadInteger '(' ')' { $$ = new ReadIntegerExpr(@1);}
-          |  T_ReadLine '(' ')' { $$ = new ReadLineExpr(@1); }
-          |  T_New '(' ID ')' { $$ = new NewExpr(@1, new NamedType($3));}
-          |  T_NewArray '(' Expr ',' Type ')' { $$ = new NewArrayExpr(@1, $3, $5);}
+          |  T_ReadInteger '(' ')' { $$ = new ReadIntegerExpr(Join(@1, @3));}
+          |  T_ReadLine '(' ')' { $$ = new ReadLineExpr(Join(@1, @3)); }
+          |  T_New '(' ID ')' { $$ = new NewExpr(Join(@1, @4), new NamedType($3));}
+          |  T_NewArray '(' Expr ',' Type ')' { $$ = new NewArrayExpr(Join(@1, @6), $3, $5);}
           ;
 
 LValue    :  ArrayAccess { $$ = $1; }
           |  FieldAccess { $$ = $1; }
           ;
 
-ArrayAccess : Expr '[' Expr ']' { $$ = new ArrayAccess(@1, $1, $3);}
+ArrayAccess : Expr '[' Expr ']' { $$ = new ArrayAccess(Join(@1, @4), $1, $3);}
           ;
 
 FieldAccess : Expr '.' ID { $$ = new FieldAccess($1, $3);}
             | ID { $$ = new FieldAccess(NULL, $1);}
             ;
 
-Call      :  Expr '.' ID '(' Actuals ')' { $$ = new Call(@1, $1, $3, $5);}
-          |  ID '(' Actuals ')' { $$ = new Call(@1, NULL, $1, $3);}
+Call      :  Expr '.' ID '(' Actuals ')' { $$ = new Call(Join(@1, @6), $1, $3, $5);}
+          |  ID '(' Actuals ')' { $$ = new Call(Join(@1, @4), NULL, $1, $3);}
           ;
 
 Actuals   :  ActualList { $$ = $1; }

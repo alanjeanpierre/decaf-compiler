@@ -109,6 +109,8 @@ class ReturnStmt : public Stmt
   public:
     ReturnStmt(yyltype loc, Expr *expr);
     void Check();
+
+    yyltype *GetLocation();
 };
 
 class PrintStmt : public Stmt

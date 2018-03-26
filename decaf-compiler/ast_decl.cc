@@ -26,6 +26,7 @@ bool VarDecl::MatchesOther(VarDecl *other) {
 VarDecl::VarDecl(Identifier *n, Type *t) : Decl(n) {
     Assert(n != NULL && t != NULL);
     (type=t)->SetParent(this);
+    shadowtype = t;
 }
   
 void VarDecl::Check() {
@@ -38,7 +39,9 @@ void VarDecl::CheckScope(EnvVector *env) {
 }
 
 void VarDecl::CheckTypes() {
-    type->Check();
+    if (!type->Check()) {
+        AssignType(Type::errorType);
+    }
 }
 
 
@@ -70,7 +73,6 @@ void ClassDecl::CheckExtends() {
     e->CheckInheritance();
     EnvVector *parentScope = e->GetEnv();
     env->SetParent(parentScope);
-    Type::hierarchy->AddClassInheritance(e->GetType(), this->GetType());
 
     for (int i = 0; i < members->NumElements(); i++) {
         Decl* n = members->Nth(i);
@@ -132,6 +134,9 @@ void ClassDecl::CheckInheritance() {
     
     // build interface methods
     BuildInterface();
+
+    // add class to type hierarchy
+    Type::hierarchy->AddClassInheritance(extends, this->GetType(), implements);
 }
 
 void ClassDecl::CheckFunctions() {
@@ -199,6 +204,13 @@ bool InterfaceDecl::CheckImplements(EnvVector *sub) {
 
     }
     return ok;
+}
+
+void InterfaceDecl::CheckInheritance() {
+    env = env->Push();
+    for (int i = 0; i < members->NumElements(); i++) {
+        env->InsertIfNotExists(members->Nth(i));
+    }
 }
 
 void InterfaceDecl::AddMethodsToScope(EnvVector *sub) {

@@ -130,7 +130,13 @@ Type *LogicalExpr::CheckType(EnvVector *env) {
 }
 
 void AssignExpr::Check() {
-    CheckType(env);
+    Type *result = CheckType(env);
+    FieldAccess *f = dynamic_cast<FieldAccess*>(left);
+    if (f != NULL) {
+        VarDecl *lval = dynamic_cast<VarDecl*>(env->Search(f->GetFieldName()));
+        if (lval)
+            lval->AssignType(result);        
+    }
 }
 
 Type *AssignExpr::CheckType(EnvVector *env) {
@@ -139,11 +145,13 @@ Type *AssignExpr::CheckType(EnvVector *env) {
     Type *r = right->CheckType(env);
 
 
-    if (r->IsConvertableTo(l))
+    if (r->IsConvertableTo(l)) {
         return l;
+    }
     else {
         ReportError::IncompatibleOperands(op, l, r);
-        return Type::errorType;
+        // should still return left type and not convert to error?
+        return l;
         
     }
 }
@@ -177,10 +185,29 @@ void FieldAccess::Check() {
 
 Type *FieldAccess::CheckType(EnvVector *env) {
 
-    if (base == NULL) { // single field access
-        //return env->GetTypeDecl(field)->GetType();
-        return env->Search(field->getName())->GetType();
+    Type *btype = Type::errorType;
+    if (base != NULL) {
+        btype = base->CheckType(env);
+        if (btype->IsEquivalentTo(Type::errorType)) {
+            return Type::errorType;
+        }
     }
+
+    if (base == NULL) { // single field access
+        Decl* t = env->Search(field->getName());
+        if (t){
+            if (dynamic_cast<FnDecl*>(t) != NULL) {
+                ReportError::IdentifierNotDeclared(field, LookingForVariable);
+                return Type::errorType;
+            }
+            return t->GetType();
+        }
+        else {
+            ReportError::IdentifierNotDeclared(field, LookingForVariable);
+            return Type::errorType;
+        }
+    }
+
 
     EnvVector *newEnv = EnvVector::GetProperScope(env, base);
 
@@ -190,17 +217,16 @@ Type *FieldAccess::CheckType(EnvVector *env) {
     }
 
 
+    Decl *f = newEnv->Search(field->getName());
+    if ( f == NULL) {
+        ReportError::FieldNotFoundInBase(field, btype);
+        return Type::errorType;
+    } 
+
     if (!env->IsInClassScope()) {
         ReportError::InaccessibleField(field, base->CheckType(env));
         return Type::errorType;
     }
-
-    Decl *f = newEnv->Search(field->getName());
-    if ( f == NULL) {
-        ReportError::IdentifierNotDeclared(field, LookingForVariable);
-        return Type::errorType;
-    } 
-
 
     return f->GetType();
 }
@@ -211,23 +237,54 @@ void Call::Check() {
 
 Type *Call::CheckType(EnvVector *env) {
 
-    EnvVector *newEnv = EnvVector::GetProperScope(env, base);
 
-    
+    Type *btype = Type::errorType;
+    if (base != NULL) {
+        btype = base->CheckType(env);
+        if (btype->IsEquivalentTo(Type::errorType)) {
+            return Type::errorType;
+        }
+    }
+
+    // special case for arr.length()
+    if (dynamic_cast<ArrayType*>(btype) != NULL &&
+        strcmp(field->getName(), "length") == 0) {
+            if (actuals->NumElements() != 0) 
+                ReportError::NumArgsMismatch(field, 0, actuals->NumElements());
+            return Type::intType;
+    }
+
+    EnvVector *newEnv;
+    Decl *c = env->GetTypeDecl(btype->getName());
+    if (c)
+        newEnv = c->GetEnv();
+    else {
+        newEnv = EnvVector::GetProperScope(env, base);
+    }
 
     if (newEnv == NULL) {
-        ReportError::FieldNotFoundInBase(field, base->CheckType(env));
         List<Type*> *actuals_t = new List<Type*>;
         for (int i = 0; i < actuals->NumElements(); i++) {
             actuals_t->Append(actuals->Nth(i)->CheckType(env));
         }
+        ReportError::FieldNotFoundInBase(field, base->CheckType(env));
         return Type::errorType;
         
     }
 
+
     FnDecl *f = dynamic_cast<FnDecl*>(newEnv->Search(field->getName()));
     if (f == NULL) {
-        ReportError::IdentifierNotDeclared(field, LookingForFunction);
+        List<Type*> *actuals_t = new List<Type*>;
+        for (int i = 0; i < actuals->NumElements(); i++) {
+            actuals_t->Append(actuals->Nth(i)->CheckType(env));
+        }
+        //std::cerr << "is base null? " << (base == NULL) << std::endl;
+        if (base == NULL) {
+            ReportError::IdentifierNotDeclared(field, LookingForFunction);
+        } else {
+            ReportError::FieldNotFoundInBase(field, btype);
+        }
         return Type::errorType;
     } 
 
@@ -250,7 +307,6 @@ Type *Call::CheckType(EnvVector *env) {
             ReportError::ArgMismatch(actuals->Nth(i), i+1, t, formals->Nth(i));
         }
     }
-
     return f->GetType();
 
 

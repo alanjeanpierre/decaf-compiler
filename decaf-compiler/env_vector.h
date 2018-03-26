@@ -34,7 +34,8 @@ class EnvVector {
         void AddType(Decl *t);
         bool TypeExists(Identifier *t);
         Decl* GetTypeDecl(Identifier *t);
-        
+        Decl* GetTypeDecl(char *t);
+
         static EnvVector *GetProperScope(EnvVector *env, Expr *e);
 
         void SetScopeLevel(ScopeLevel s);

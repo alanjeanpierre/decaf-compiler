@@ -36,7 +36,7 @@ class Expr : public Stmt
 class EmptyExpr : public Expr
 {
   public:
-    Type *CheckType(EnvVector *env) { return Type::nullType; }
+    Type *CheckType(EnvVector *env) { return Type::voidType; }
     void Check(EnvVector *env) {;}
     void Check() {;}
 };
@@ -234,6 +234,7 @@ class Call : public Expr
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env);
+    Expr *GetBase() { return base; }
 };
 
 class NewExpr : public Expr

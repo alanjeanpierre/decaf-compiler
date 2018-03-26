@@ -36,7 +36,7 @@ class Type : public Node
     friend std::ostream& operator<<(std::ostream& out, Type *t) { t->PrintToStream(out); return out; }
     bool IsEquivalentTo(Type *other) { return strcmp(getName(), other->getName()) == 0; }
     virtual bool IsConvertableTo(Type *other);
-    virtual void Check() { ; }
+    virtual bool Check() { return true; }
     virtual char* getName() { return typeName; }
     
     static InheritanceHierarchy *hierarchy;
@@ -53,9 +53,10 @@ class NamedType : public Type
     void PrintToStream(std::ostream& out) { out << id; }
     char* getName();
     Identifier* getID();  
-    void Check();
+    bool Check();
     bool IsEquivalentTo(Type *other);
     bool IsConvertableTo(Type *other);
+    bool IsInterfaceableTo(Type *other);
 };
 
 class ArrayType : public Type 
@@ -67,7 +68,7 @@ class ArrayType : public Type
     ArrayType(yyltype loc, Type *elemType);
     
     void PrintToStream(std::ostream& out) { out << elemType << "[]"; }
-    void Check() { elemType->Check(); }
+    bool Check() { return elemType->Check(); }
     char* getName() { return elemType->getName(); }
     bool IsEquivalentTo(Type *other);
     bool IsConvertableTo(Type *other);

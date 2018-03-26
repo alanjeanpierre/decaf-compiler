@@ -40,6 +40,8 @@ do
             pass=$((pass + 1))
 
         fi
+
+        rm "$file.out"
     done
 done
     

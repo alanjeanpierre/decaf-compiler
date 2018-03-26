@@ -48,7 +48,13 @@ NamedType::NamedType(Identifier *i) : Type(*i->GetLocation()) {
 
 bool NamedType::IsConvertableTo(Type *other) {
     // no polymorphism atm
-    return IsEquivalentTo(other) || Type::hierarchy->IsSubClassOf(other, this);
+
+    // add flag for interface OK
+    return IsEquivalentTo(other) || Type::hierarchy->IsSubClassOf(other, this) || Type::hierarchy->IsInterfaceOf(other, this);
+}
+
+bool NamedType::IsInterfaceableTo(Type *other) {
+    return IsEquivalentTo(other) || Type::hierarchy->IsInterfaceOf(other, this);
 }
 
 char* NamedType::getName() {
@@ -59,10 +65,12 @@ Identifier* NamedType::getID() {
     return id;
 }
 
-void NamedType::Check() {
+bool NamedType::Check() {
     if (!parent->GetEnv()->TypeExists(getID())) {
         ReportError::IdentifierNotDeclared(getID(), LookingForType);
+        return false;
     }
+    return true;
 }
 
 bool NamedType::IsEquivalentTo(Type *other) {

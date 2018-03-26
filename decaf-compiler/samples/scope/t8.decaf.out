@@ -1,6 +1,0 @@
-
-*** Error line 6.
-class GradStudent extends Sleeper implements Student
-                                             ^^^^^^^
-*** Class 'GradStudent' does not implement entire interface 'Student'
-

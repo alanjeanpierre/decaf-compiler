@@ -101,6 +101,10 @@ Decl *EnvVector::GetTypeDecl(Identifier *t) {
     return EnvVector::types->Lookup(t->getName());
 }
 
+Decl *EnvVector::GetTypeDecl(char *t) {
+    return EnvVector::types->Lookup(t);
+}
+
 EnvVector *EnvVector::GetProperScope(EnvVector *env, Expr *e) {
     if (e == NULL)
         return env;
@@ -116,12 +120,13 @@ EnvVector *EnvVector::GetProperScope(EnvVector *env, Expr *e) {
         if (d) {
             if (NamedType* t = dynamic_cast<NamedType*>(d->GetType())) {
                 Decl *e2 = env->GetTypeDecl(t->getID());
+                if (e2 == NULL) return env;
                 return e2->GetEnv();
             } else {
                 return NULL;
             }
         }
-    } 
+    } //else if (Call *c = dynamic_cast<Call*>(e)) 
     
     return env;
     

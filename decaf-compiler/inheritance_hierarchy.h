@@ -2,21 +2,24 @@
 #define _INHERITANCE_HIERARCHY_H
 
 #include "hashtable.h"
+#include "list.h"
 
 class Type;
 
 class InheritanceHierarchy {
 private:
-    struct List {
+    struct Link {
         Type *type;
-        List *Parent;
+        Link *Parent;
+        List<NamedType*> *Interfaces;
     };
 
-    Hashtable<List*> * hierarchy;
+    Hashtable<Link*> * hierarchy;
 public:
     InheritanceHierarchy();
     bool IsSubClassOf(Type *base, Type *derived);
-    void AddClassInheritance(Type *base, Type* derived);
+    bool IsInterfaceOf(Type *interface, Type *derived);
+    void AddClassInheritance(Type *base, Type* derived, List<NamedType*> *interfaces);
 };
 
 #endif

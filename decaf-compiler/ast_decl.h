@@ -46,18 +46,22 @@ class VarDecl : public Decl
 {
   protected:
     Type *type;
-    
+    Type *shadowtype;
+   
   public:
     VarDecl(Identifier *name, Type *type);
     void Check();
     void CheckScope(EnvVector *env);
     bool MatchesOther(VarDecl *other);
+    
+    void AssignType(Type *other) { shadowtype = other; }
+    Type *GetCurrentType() { return shadowtype; }
 
     void CheckInheritance() {;}
     void CheckImplements() {;}
     void CheckFunctions() {;}
     void CheckTypes();
-    Type *GetType() { return type; }
+    Type *GetType() { return shadowtype; }
 };
 
 class ClassDecl : public Decl 
@@ -99,7 +103,7 @@ class InterfaceDecl : public Decl
     bool CheckImplements(EnvVector *sub);
     void AddMethodsToScope(EnvVector *sub);
 
-    void CheckInheritance() {;}
+    void CheckInheritance();
     void CheckImplements() {;}
     void CheckFunctions() {;}
     void CheckTypes() {;}
