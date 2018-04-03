@@ -57,23 +57,27 @@ Type *ArithmeticExpr::CheckType(EnvVector *env) {
         if (r->IsConvertableTo(Type::intType)) return Type::intType;
         if (r->IsConvertableTo(Type::doubleType)) return Type::doubleType;
         ReportError::IncompatibleOperand(op, r);
+        resolvedType = Type::errorType;
         return Type::errorType;
     }
 
     Type* l = left->CheckType(env);
     Type* r = right->CheckType(env);
     if (l->IsConvertableTo(Type::intType) && r->IsConvertableTo(Type::intType)) {
+        resolvedType = Type::intType;
         return Type::intType;
     } else if (l->IsConvertableTo(Type::doubleType) && r->IsConvertableTo(Type::doubleType)) {
+        resolvedType = Type::doubleType;
         return Type::doubleType;
     } else {
         ReportError::IncompatibleOperands(op, l, r);
+        resolvedType = Type::errorType;
         return Type::errorType;
     }
 }
 
 void RelationalExpr::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 Type *RelationalExpr::CheckType(EnvVector *env) {
@@ -81,16 +85,19 @@ Type *RelationalExpr::CheckType(EnvVector *env) {
     Type *r = right->CheckType(env);
 
     if ((l->IsConvertableTo(Type::doubleType) && r->IsConvertableTo(Type::doubleType)) ||
-        (l->IsConvertableTo(Type::intType) && r->IsConvertableTo(Type::intType)))
+        (l->IsConvertableTo(Type::intType) && r->IsConvertableTo(Type::intType))) {
+        resolvedType = Type::boolType;
         return Type::boolType;
+    }
     else {
         ReportError::IncompatibleOperands(op, l, r);
+        resolvedType = Type::errorType;
         return Type::errorType;
     }
 }
 
 void EqualityExpr::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 Type *EqualityExpr::CheckType(EnvVector *env) {
@@ -98,39 +105,49 @@ Type *EqualityExpr::CheckType(EnvVector *env) {
     Type *r = right->CheckType(env);
 
     if (l->IsConvertableTo(r) || r->IsConvertableTo(l)) {
+        resolvedType = Type::boolType;
         return Type::boolType;
     } else {
         ReportError::IncompatibleOperands(op, l, r);
+        resolvedType = Type::errorType;
         return Type::errorType;
     }
 }
 
 
 void LogicalExpr::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 Type *LogicalExpr::CheckType(EnvVector *env) {
     if (left == NULL) {
         Type *r = right->CheckType(env);
-        if (r->IsConvertableTo(Type::boolType))
+        if (r->IsConvertableTo(Type::boolType)) {
+
+            resolvedType = Type::boolType;
             return Type::boolType;
+        }
         ReportError::IncompatibleOperand(op, r);
+
+        resolvedType = Type::errorType;
         return Type::errorType;
     }
 
     Type *l = left->CheckType(env);
     Type *r = right->CheckType(env);
     if (l->IsConvertableTo(Type::boolType) && r->IsConvertableTo(Type::boolType)) {
+        resolvedType = Type::boolType;
         return Type::boolType;
     } else {
         ReportError::IncompatibleOperands(op, l, r);
+        resolvedType = Type::errorType;
         return Type::errorType;
     }
 }
 
 void AssignExpr::Check() {
     Type *result = CheckType(env);
+    resolvedType = result;
     FieldAccess *f = dynamic_cast<FieldAccess*>(left);
     if (f != NULL) {
         VarDecl *lval = dynamic_cast<VarDecl*>(env->Search(f->GetFieldName()));
@@ -145,6 +162,7 @@ Type *AssignExpr::CheckType(EnvVector *env) {
     Type *r = right->CheckType(env);
 
 
+    resolvedType = l;
     if (r->IsConvertableTo(l)) {
         return l;
     }
@@ -157,7 +175,7 @@ Type *AssignExpr::CheckType(EnvVector *env) {
 }
 
 void ArrayAccess::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 Type *ArrayAccess::CheckType(EnvVector *env) {
@@ -175,17 +193,19 @@ Type *ArrayAccess::CheckType(EnvVector *env) {
         ReportError::SubscriptNotInteger(subscript);
     }
 
+    resolvedType = r_type;
     return r_type;
 
 }
 
 void FieldAccess::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 Type *FieldAccess::CheckType(EnvVector *env) {
 
     Type *btype = Type::errorType;
+    resolvedType = Type::errorType;
     if (base != NULL) {
         btype = base->CheckType(env);
         if (btype->IsEquivalentTo(Type::errorType)) {
@@ -200,7 +220,8 @@ Type *FieldAccess::CheckType(EnvVector *env) {
                 ReportError::IdentifierNotDeclared(field, LookingForVariable);
                 return Type::errorType;
             }
-            return t->GetType();
+            resolvedType = t->GetType();
+            return resolvedType;
         }
         else {
             ReportError::IdentifierNotDeclared(field, LookingForVariable);
@@ -227,18 +248,19 @@ Type *FieldAccess::CheckType(EnvVector *env) {
         ReportError::InaccessibleField(field, base->CheckType(env));
         return Type::errorType;
     }
-
-    return f->GetType();
+    resolvedType = f->GetType();
+    return resolvedType;
 }
    
 void Call::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 Type *Call::CheckType(EnvVector *env) {
 
 
     Type *btype = Type::errorType;
+    resolvedType = Type::errorType;
     if (base != NULL) {
         btype = base->CheckType(env);
         if (btype->IsEquivalentTo(Type::errorType)) {
@@ -251,6 +273,7 @@ Type *Call::CheckType(EnvVector *env) {
         strcmp(field->getName(), "length") == 0) {
             if (actuals->NumElements() != 0) 
                 ReportError::NumArgsMismatch(field, 0, actuals->NumElements());
+            resolvedType = Type::intType;
             return Type::intType;
     }
 
@@ -307,30 +330,33 @@ Type *Call::CheckType(EnvVector *env) {
             ReportError::ArgMismatch(actuals->Nth(i), i+1, t, formals->Nth(i));
         }
     }
-    return f->GetType();
+    resolvedType = f->GetType();
+    return resolvedType;
 
 
 }
 
 void NewExpr::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 Type *NewExpr::CheckType(EnvVector *env) {
     if (env->TypeExists(cType->getID()) && dynamic_cast<ClassDecl*>(env->GetTypeDecl(cType->getID())) != NULL) {
+        resolvedType = cType;
         return cType;
     }
 
     ReportError::IdentifierNotDeclared(cType->getID(), LookingForClass);
+    resolvedType = Type::errorType;
     return Type::errorType;
 }
 
 void NewArrayExpr::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 void This::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 Decl *This::GetClass() {
@@ -349,23 +375,27 @@ Decl *This::GetClass() {
 Type *This::CheckType(EnvVector *env) {
     if (!env->IsInClassScope()) {
         ReportError::ThisOutsideClassScope(this);
+        resolvedType = Type::errorType;
         return Type::errorType;
     }
 
     
     Decl *class_ = GetClass();
-    if (class_) 
-        return class_->GetType();
+    if (class_) {
+        resolvedType = class_->GetType();
+        return resolvedType;
+    }
 
+    resolvedType = Type::errorType;
     return Type::errorType;
 }
 
 void ReadIntegerExpr::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 void ReadLineExpr::Check() {
-    CheckType(env);
+    resolvedType = CheckType(env);
 }
 
 Type *NewArrayExpr::CheckType(EnvVector *env) {
@@ -375,10 +405,12 @@ Type *NewArrayExpr::CheckType(EnvVector *env) {
     if (NamedType *t = dynamic_cast<NamedType*>(elemType)) {
         if (!env->TypeExists(t->getID())) {
             ReportError::IdentifierNotDeclared(t->getID(), LookingForType);
-            return new ArrayType(*location, Type::errorType);    
+            resolvedType = new ArrayType(*location, Type::errorType);   
+            return resolvedType; 
         }
     }
-    return new ArrayType(*location, elemType);
+    resolvedType = new ArrayType(*location, elemType);
+    return resolvedType;
 }
 
 ArrayAccess::ArrayAccess(yyltype loc, Expr *b, Expr *s) : LValue(loc) {

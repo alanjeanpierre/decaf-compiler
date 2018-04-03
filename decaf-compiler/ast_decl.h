@@ -16,6 +16,7 @@
 #include "ast.h"
 #include "list.h"
 #include "env_vector.h"
+#include "tac.h"
 
 class Type;
 class NamedType;
@@ -26,6 +27,7 @@ class Decl : public Node
 {
   protected:
     Identifier *id;
+    Location *memlocation;
   
   public:
     Decl(Identifier *name);
@@ -40,6 +42,9 @@ class Decl : public Node
     virtual void CheckTypes() {;}
     virtual Type *GetType() { return NULL; }
     bool CheckName(Decl* other) { return strcmp(getName(), other->getName()) == 0;}
+
+    void SetMemLocation(Segment s, int offset);
+    int EmitClass(CodeGenerator *cg) {;}
 };
 
 class VarDecl : public Decl 
@@ -62,6 +67,8 @@ class VarDecl : public Decl
     void CheckFunctions() {;}
     void CheckTypes();
     Type *GetType() { return shadowtype; }
+
+    int Emit(CodeGenerator *cg);
 };
 
 class ClassDecl : public Decl 
@@ -89,6 +96,8 @@ class ClassDecl : public Decl
     void CheckExtends();
     void BuildInterface();
     Type *GetType();
+
+    int Emit(CodeGenerator *cg);
 };
 
 class InterfaceDecl : public Decl 
@@ -108,6 +117,9 @@ class InterfaceDecl : public Decl
     void CheckFunctions() {;}
     void CheckTypes() {;}
     Type *GetType();
+
+
+    int Emit(CodeGenerator *cg) {;}
 };
 
 class FnDecl : public Decl 
@@ -130,6 +142,10 @@ class FnDecl : public Decl
     void CheckFunctions();
     List<Type*> *GetFormalsTypes();
     Type *GetType() { return returnType; }
+
+
+    int Emit(CodeGenerator *cg);
+    int EmitClass(CodeGenerator *cg);
 };
 
 #endif

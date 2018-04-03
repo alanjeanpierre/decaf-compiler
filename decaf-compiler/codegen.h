@@ -26,8 +26,10 @@ typedef enum { Alloc, ReadLine, ReadInteger, StringEqual,
 class CodeGenerator {
   private:
     std::list<Instruction*> code;
+    int sp;
 
   public:
+  
            // Here are some class constants to remind you of the offsets
            // used for globals, locals, and parameters. You will be
            // responsible for using these when assigning Locations.
@@ -46,6 +48,8 @@ class CodeGenerator {
     static Location* ThisPtr;
 
     CodeGenerator();
+
+    int GetResetSpace() { int tmp = sp; sp = 0; return tmp; }
     
          // Assigns a new unique label name and returns it. Does not
          // generate any Tac instructions (see GenLabel below if needed)

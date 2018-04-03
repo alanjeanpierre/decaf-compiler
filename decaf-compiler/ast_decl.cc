@@ -7,12 +7,18 @@
 #include "ast_type.h"
 #include "ast_stmt.h"
 #include "errors.h"
+#include "tac.h"
+#include "codegen.h"
         
          
 Decl::Decl(Identifier *n) : Node(*n->GetLocation()) {
     Assert(n != NULL);
     (id=n)->SetParent(this); 
     env = NULL;
+}
+
+void Decl::SetMemLocation(Segment s, int offset) {
+    memlocation = new Location(s, offset, id->getName());
 }
 
 const char* Decl::getName() {
@@ -42,6 +48,10 @@ void VarDecl::CheckTypes() {
     if (!type->Check()) {
         AssignType(Type::errorType);
     }
+}
+
+int VarDecl::Emit(CodeGenerator *cg) {
+    return 0; // don't emit for var decls?
 }
 
 
@@ -158,6 +168,15 @@ void ClassDecl::CheckImplements() {
             ReportError::InterfaceNotImplemented(this, implements->Nth(i));
     }
 
+}
+
+int ClassDecl::Emit(CodeGenerator *cg) {
+    int space = 0;
+    for (int i = 0; i < members->NumElements(); i++) {
+        space += members->Nth(i)->EmitClass(cg);
+    }
+
+    return space;
 }
 
 
@@ -294,4 +313,34 @@ Type *ClassDecl::GetType() {
 
 Type *InterfaceDecl::GetType() {
     return new NamedType(id);
+}
+
+int FnDecl::Emit(CodeGenerator *cg) {
+    for (int i = 0; i < formals->NumElements(); i++) {
+        // leave room for this pointer
+        formals->Nth(i)->SetMemLocation(fpRelative, i*4);
+    }
+    cg->GenLabel(this->getName());
+    BeginFunc* b = cg->GenBeginFunc();
+    int space = body->Emit(cg);
+    space += cg->GetResetSpace()*4;
+    cg->GenEndFunc();
+
+    b->SetFrameSize(space);
+
+    return space;
+
+}
+
+int FnDecl::EmitClass(CodeGenerator *cg) {
+    for (int i = 0; i < formals->NumElements(); i++) {
+        // leave room for this pointer
+        formals->Nth(i)->SetMemLocation(fpRelative, (i+1)*4);
+    }
+    cg->GenLabel(this->getName());
+    BeginFunc* b = cg->GenBeginFunc();
+    int space = body->Emit(cg);
+    cg->GenEndFunc();
+
+    b->SetFrameSize(space);
 }

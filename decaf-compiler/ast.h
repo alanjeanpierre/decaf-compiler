@@ -34,6 +34,7 @@
 //#include "env_vector.h"
 #include <iostream>
 
+class CodeGenerator;
 class EnvVector;
 
 class Node 
@@ -54,6 +55,7 @@ class Node
     yyltype *GetLocation()   { return location; }
     void SetParent(Node *p)  { parent = p; }
     Node *GetParent()        { return parent; }
+    virtual int Emit(CodeGenerator *cg) {;}
 };
    
 

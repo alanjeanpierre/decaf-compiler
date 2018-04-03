@@ -7,6 +7,7 @@
 #include "ast_decl.h"
 #include "ast_expr.h"
 #include "env_vector.h"
+#include "codegen.h"
 
 
 Program::Program(List<Decl*> *d) {
@@ -51,6 +52,16 @@ void Program::Check() {
     }
 }
 
+void Program::Emit() {
+    CodeGenerator *cg = new CodeGenerator();
+    for (int i = 0; i < decls->NumElements(); i++) {
+        decls->Nth(i)->SetMemLocation(gpRelative, i*4);
+        decls->Nth(i)->Emit(cg);
+    }
+
+    cg->DoFinalCodeGen();
+}
+
 StmtBlock::StmtBlock(List<VarDecl*> *d, List<Stmt*> *s) {
     Assert(d != NULL && s != NULL);
     (decls=d)->SetParentAll(this);
@@ -76,6 +87,25 @@ void StmtBlock::Check() {
         stmts->Nth(i)->Check();
     }
 
+}
+
+int StmtBlock::Emit(CodeGenerator *cg) {
+    int space = decls->NumElements();
+    for (int i = 0; i < decls->NumElements(); i++) {
+        decls->Nth(i)->SetMemLocation(fpRelative, -i*4);
+    }
+
+
+    for (int i = 0; i < stmts->NumElements(); i++) {
+        space += stmts->Nth(i)->Emit(cg);
+    }
+
+
+    return space;
+}
+
+int StmtBlock::GetFrameSize() {
+    return decls->NumElements() * 4;
 }
 
 ConditionalStmt::ConditionalStmt(Expr *t, Stmt *b) { 
@@ -171,6 +201,28 @@ void PrintStmt::Check() {
         Type *t = args->Nth(i)->CheckType(env);
         if (!(t->IsConvertableTo(Type::intType) || t->IsConvertableTo(Type::stringType) || t->IsConvertableTo(Type::boolType))) {
             ReportError::PrintArgMismatch(args->Nth(i), i+1, t);
+        }
+    }
+}
+
+int PrintStmt::Emit(CodeGenerator *cg) {
+    int space = 0;
+    for (int i = 0; i < args->NumElements(); i++) {
+        StringConstant *c;
+        IntConstant *d;
+        BoolConstant *b;
+        if ((c = dynamic_cast<StringConstant*>(args->Nth(i))) != NULL) {
+            Location *tmp = cg->GenLoadConstant(c->GetVal());
+            cg->GenBuiltInCall(PrintString, tmp);
+        } else if ((d = dynamic_cast<IntConstant*>(args->Nth(i))) != NULL) {
+            Location *tmp = cg->GenLoadConstant(d->GetVal());
+            cg->GenBuiltInCall(PrintInt, tmp);
+        } else if ((b = dynamic_cast<BoolConstant*>(args->Nth(i))) != NULL) {
+            Location *tmp = cg->GenLoadConstant(b->GetVal());
+            cg->GenBuiltInCall(PrintInt, tmp);
+        } else { // not a constant
+            Type *t = args->Nth(i)->GetResolvedType();
+            std::cerr << " lol idk" << std::endl;
         }
     }
 }

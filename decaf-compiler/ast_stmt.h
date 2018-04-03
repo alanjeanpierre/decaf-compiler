@@ -28,6 +28,7 @@ class Program : public Node
   public:
      Program(List<Decl*> *declList);
      void Check();
+     void Emit();
 };
 
 class Stmt : public Node
@@ -36,6 +37,8 @@ class Stmt : public Node
      Stmt() : Node() {}
      Stmt(yyltype loc) : Node(loc) {}
      virtual void Check() {;}
+     int GetFrameSize() { return 0;}
+     
 };
 
 class StmtBlock : public Stmt 
@@ -47,6 +50,9 @@ class StmtBlock : public Stmt
   public:
     StmtBlock(List<VarDecl*> *variableDeclarations, List<Stmt*> *statements);
     void Check();
+
+    int Emit(CodeGenerator *cg);
+    int GetFrameSize();
 };
 
   
@@ -121,6 +127,8 @@ class PrintStmt : public Stmt
   public:
     PrintStmt(List<Expr*> *arguments);
     void Check();
+
+    int Emit(CodeGenerator *cg);
 };
 
 

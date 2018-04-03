@@ -24,10 +24,13 @@ class NamedType; // for new
 
 class Expr : public Stmt 
 {
+  protected:
+     Type *resolvedType;
   public:
     Expr(yyltype loc) : Stmt(loc) {}
     Expr() : Stmt() {}
     virtual Type *CheckType(EnvVector *env) { return NULL; }
+    Type *GetResolvedType() { return resolvedType; }
 };
 
 /* This node type is used for those places where an expression is optional.
@@ -50,7 +53,8 @@ class IntConstant : public Expr
     IntConstant(yyltype loc, int val);
     void Check(EnvVector *env) {;}
     void Check() {;}
-    Type *CheckType(EnvVector *env) { return Type::intType; }
+    Type *CheckType(EnvVector *env) { resolvedType = Type::intType; return Type::intType; }
+    int GetVal() { return value; }
 };
 
 class DoubleConstant : public Expr 
@@ -62,7 +66,8 @@ class DoubleConstant : public Expr
     DoubleConstant(yyltype loc, double val);
     void Check(EnvVector *env) {;}
     void Check() {;}
-    Type *CheckType(EnvVector *env) { return Type::doubleType; }
+    Type *CheckType(EnvVector *env) { resolvedType = Type::doubleType; return Type::doubleType; }
+    double GetVal() { return value; }
 };
 
 class BoolConstant : public Expr 
@@ -74,7 +79,8 @@ class BoolConstant : public Expr
     BoolConstant(yyltype loc, bool val);
     void Check(EnvVector *env) {;}
     void Check() {;}
-    Type *CheckType(EnvVector *env) { return Type::boolType; }
+    Type *CheckType(EnvVector *env) { resolvedType = Type::boolType; return Type::boolType; }
+    int GetVal() { return value ? 1 : 0; }
 };
 
 class StringConstant : public Expr 
@@ -86,7 +92,8 @@ class StringConstant : public Expr
     StringConstant(yyltype loc, const char *val);
     void Check(EnvVector *env) {;}
     void Check() {;}
-    Type *CheckType(EnvVector *env) { return Type::stringType; }
+    Type *CheckType(EnvVector *env) { resolvedType = Type::stringType; return Type::stringType; }
+    char * GetVal() { return value; }
 };
 
 class NullConstant: public Expr 
@@ -95,7 +102,7 @@ class NullConstant: public Expr
     NullConstant(yyltype loc) : Expr(loc) {}
     void Check(EnvVector *env) {;}
     void Check() {;}
-    Type *CheckType(EnvVector *env) { return Type::nullType; }
+    Type *CheckType(EnvVector *env) { resolvedType = Type::nullType; return Type::nullType; }
 };
 
 class Operator : public Node 
@@ -118,7 +125,7 @@ class CompoundExpr : public Expr
   public:
     CompoundExpr(Expr *lhs, Operator *op, Expr *rhs); // for binary
     CompoundExpr(Operator *op, Expr *rhs);             // for unary
-    Type *CheckType(EnvVector *env) { return NULL; }
+    Type *CheckType(EnvVector *env) { return Type::errorType; }
 };
 
 class ArithmeticExpr : public CompoundExpr 

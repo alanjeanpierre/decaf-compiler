@@ -14,7 +14,9 @@ Location* CodeGenerator::ThisPtr= new Location(fpRelative, 4, "this");
   
 CodeGenerator::CodeGenerator()
 {
+  sp = 0;
 }
+
 
 char *CodeGenerator::NewLabel()
 {
@@ -29,8 +31,8 @@ Location *CodeGenerator::GenTempVar()
 {
   static int nextTempNum;
   char temp[10];
-  Location *result = NULL;
   sprintf(temp, "_tmp%d", nextTempNum++);
+  Location *result = new Location(fpRelative, sp++*4, temp);
   /* pp5: need to create variable in proper location
      in stack frame for use as temporary. Until you
      do that, the assert below will always fail to remind

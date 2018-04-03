@@ -101,6 +101,9 @@ Program   :    DeclList            {
                                       // if no errors, advance to next phase
                                       if (ReportError::NumErrors() == 0) 
                                           program->Check(); 
+
+                                      if (ReportError::NumErrors() == 0) 
+                                          program->Emit();
                                     }
           ;
 
