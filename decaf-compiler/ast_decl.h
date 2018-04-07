@@ -44,6 +44,7 @@ class Decl : public Node
     bool CheckName(Decl* other) { return strcmp(getName(), other->getName()) == 0;}
 
     void SetMemLocation(Segment s, int offset);
+    Location *GetMemLocation(CodeGenerator *cg) { return memlocation; }
     int EmitClass(CodeGenerator *cg) {;}
 };
 

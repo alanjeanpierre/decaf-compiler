@@ -5,12 +5,18 @@
 #include "ast_expr.h"
 #include "ast_type.h"
 #include "ast_decl.h"
+#include "codegen.h"
+#include "tac.h"
 #include <string.h>
 
 
 
 IntConstant::IntConstant(yyltype loc, int val) : Expr(loc) {
     value = val;
+}
+
+Location *IntConstant::GetMemLocation(CodeGenerator *cg) {
+    return cg->GenLoadConstant(GetVal());
 }
 
 DoubleConstant::DoubleConstant(yyltype loc, double val) : Expr(loc) {
@@ -21,9 +27,18 @@ BoolConstant::BoolConstant(yyltype loc, bool val) : Expr(loc) {
     value = val;
 }
 
+Location *BoolConstant::GetMemLocation(CodeGenerator *cg) {
+    return cg->GenLoadConstant(GetVal());
+}
+
+
 StringConstant::StringConstant(yyltype loc, const char *val) : Expr(loc) {
     Assert(val != NULL);
     value = strdup(val);
+}
+
+Location *StringConstant::GetMemLocation(CodeGenerator *cg) {
+    return cg->GenLoadConstant(GetVal());
 }
 
 Operator::Operator(yyltype loc, const char *tok) : Node(loc) {
@@ -76,6 +91,18 @@ Type *ArithmeticExpr::CheckType(EnvVector *env) {
     }
 }
 
+Location *ArithmeticExpr::GetMemLocation(CodeGenerator *cg) {
+    Location *l;
+    if (left == NULL) {
+        l = cg->GenLoadConstant(0);
+    } else {
+        l = left->GetMemLocation(cg);
+    }
+
+    Location *r = right->GetMemLocation(cg);
+    return cg->GenBinaryOp(op->GetOp(), l, r);
+}
+
 void RelationalExpr::Check() {
     resolvedType = CheckType(env);
 }
@@ -96,6 +123,12 @@ Type *RelationalExpr::CheckType(EnvVector *env) {
     }
 }
 
+Location *RelationalExpr::GetMemLocation(CodeGenerator *cg) {
+    Location *l = left->GetMemLocation(cg);
+    Location *r = right->GetMemLocation(cg);
+    return cg->GenBinaryOp(op->GetOp(), l, r);
+}
+
 void EqualityExpr::Check() {
     resolvedType = CheckType(env);
 }
@@ -112,6 +145,12 @@ Type *EqualityExpr::CheckType(EnvVector *env) {
         resolvedType = Type::errorType;
         return Type::errorType;
     }
+}
+
+Location *EqualityExpr::GetMemLocation(CodeGenerator *cg) {
+    Location *l = left->GetMemLocation(cg);
+    Location *r = right->GetMemLocation(cg);
+    return cg->GenBinaryOp(op->GetOp(), l, r);
 }
 
 
@@ -145,6 +184,12 @@ Type *LogicalExpr::CheckType(EnvVector *env) {
     }
 }
 
+Location *LogicalExpr::GetMemLocation(CodeGenerator *cg) {
+    Location *l = left->GetMemLocation(cg);
+    Location *r = right->GetMemLocation(cg);
+    return cg->GenBinaryOp(op->GetOp(), l, r);
+}
+
 void AssignExpr::Check() {
     Type *result = CheckType(env);
     resolvedType = result;
@@ -172,6 +217,14 @@ Type *AssignExpr::CheckType(EnvVector *env) {
         return l;
         
     }
+}
+
+int AssignExpr::Emit(CodeGenerator *cg) {
+    Location *l = left->GetMemLocation(cg);
+    Location *r = right->GetMemLocation(cg);
+
+    cg->GenAssign(l, r);
+    return 0;
 }
 
 void ArrayAccess::Check() {
@@ -204,6 +257,7 @@ void FieldAccess::Check() {
 
 Type *FieldAccess::CheckType(EnvVector *env) {
 
+    this->env = env;
     Type *btype = Type::errorType;
     resolvedType = Type::errorType;
     if (base != NULL) {
@@ -251,6 +305,17 @@ Type *FieldAccess::CheckType(EnvVector *env) {
     resolvedType = f->GetType();
     return resolvedType;
 }
+
+Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
+    if (base == NULL) {
+        Decl *d = env->Search(field->getName());
+        return d->GetMemLocation(cg);
+    }
+
+    EnvVector *newEnv = EnvVector::GetProperScope(env, base);
+    Decl *d = env->Search(GetFieldName());
+    return d->GetMemLocation(cg);
+}
    
 void Call::Check() {
     resolvedType = CheckType(env);
@@ -258,7 +323,7 @@ void Call::Check() {
 
 Type *Call::CheckType(EnvVector *env) {
 
-
+    this->env = env;
     Type *btype = Type::errorType;
     resolvedType = Type::errorType;
     if (base != NULL) {
@@ -332,6 +397,28 @@ Type *Call::CheckType(EnvVector *env) {
     }
     resolvedType = f->GetType();
     return resolvedType;
+
+
+}
+
+Location *Call::GetMemLocation(CodeGenerator *cg) {
+    Decl *d;
+    if (base == NULL) {
+        d = env->Search(field->getName());
+    } else {
+        EnvVector *newEnv = env->GetProperScope(env, base);
+        d = newEnv->Search(field->getName());
+    }
+
+    for (int i = actuals->NumElements()-1; i >= 0; i--) {
+        Location *t = actuals->Nth(i)->GetMemLocation(cg);
+        cg->GenPushParam(t);
+    }
+
+    Location *r = cg->GenLCall(d->getName(), true);
+    cg->GenPopParams(actuals->NumElements()*4);
+
+    return r;
 
 
 }

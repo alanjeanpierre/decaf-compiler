@@ -95,7 +95,6 @@ int StmtBlock::Emit(CodeGenerator *cg) {
         decls->Nth(i)->SetMemLocation(fpRelative, -i*4);
     }
 
-
     for (int i = 0; i < stmts->NumElements(); i++) {
         space += stmts->Nth(i)->Emit(cg);
     }
@@ -208,21 +207,17 @@ void PrintStmt::Check() {
 int PrintStmt::Emit(CodeGenerator *cg) {
     int space = 0;
     for (int i = 0; i < args->NumElements(); i++) {
-        StringConstant *c;
-        IntConstant *d;
-        BoolConstant *b;
-        if ((c = dynamic_cast<StringConstant*>(args->Nth(i))) != NULL) {
-            Location *tmp = cg->GenLoadConstant(c->GetVal());
+        Type *t = args->Nth(i)->GetResolvedType();
+        Location *tmp = args->Nth(i)->GetMemLocation(cg);
+        if (t->IsEquivalentTo(Type::stringType)) {
             cg->GenBuiltInCall(PrintString, tmp);
-        } else if ((d = dynamic_cast<IntConstant*>(args->Nth(i))) != NULL) {
-            Location *tmp = cg->GenLoadConstant(d->GetVal());
+        } else if (t->IsEquivalentTo(Type::intType)) {
             cg->GenBuiltInCall(PrintInt, tmp);
-        } else if ((b = dynamic_cast<BoolConstant*>(args->Nth(i))) != NULL) {
-            Location *tmp = cg->GenLoadConstant(b->GetVal());
+        } else if (t->IsEquivalentTo(Type::boolType)) {
             cg->GenBuiltInCall(PrintInt, tmp);
         } else { // not a constant
-            Type *t = args->Nth(i)->GetResolvedType();
-            std::cerr << " lol idk" << std::endl;
+                // idk!!
+                ;
         }
     }
 }

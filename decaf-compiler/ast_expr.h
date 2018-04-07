@@ -18,6 +18,7 @@
 #include "list.h"
 #include "ast_type.h"
 
+class Location;
 class NamedType; // for new
 //class Type; // for NewArray
 
@@ -31,6 +32,7 @@ class Expr : public Stmt
     Expr() : Stmt() {}
     virtual Type *CheckType(EnvVector *env) { return NULL; }
     Type *GetResolvedType() { return resolvedType; }
+    virtual Location *GetMemLocation(CodeGenerator *cg) {;}
 };
 
 /* This node type is used for those places where an expression is optional.
@@ -55,6 +57,7 @@ class IntConstant : public Expr
     void Check() {;}
     Type *CheckType(EnvVector *env) { resolvedType = Type::intType; return Type::intType; }
     int GetVal() { return value; }
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class DoubleConstant : public Expr 
@@ -81,6 +84,7 @@ class BoolConstant : public Expr
     void Check() {;}
     Type *CheckType(EnvVector *env) { resolvedType = Type::boolType; return Type::boolType; }
     int GetVal() { return value ? 1 : 0; }
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class StringConstant : public Expr 
@@ -94,6 +98,7 @@ class StringConstant : public Expr
     void Check() {;}
     Type *CheckType(EnvVector *env) { resolvedType = Type::stringType; return Type::stringType; }
     char * GetVal() { return value; }
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class NullConstant: public Expr 
@@ -114,6 +119,7 @@ class Operator : public Node
     Operator(yyltype loc, const char *tok);
     friend std::ostream& operator<<(std::ostream& out, Operator *o) { return out << o->tokenString; }
     void Check(EnvVector *env) {;}
+    char *GetOp() { return tokenString; }
  };
  
 class CompoundExpr : public Expr
@@ -136,6 +142,7 @@ class ArithmeticExpr : public CompoundExpr
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env);
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class RelationalExpr : public CompoundExpr 
@@ -144,6 +151,7 @@ class RelationalExpr : public CompoundExpr
     RelationalExpr(Expr *lhs, Operator *op, Expr *rhs) : CompoundExpr(lhs,op,rhs) {}
     Type *CheckType(EnvVector *env);
     void Check();
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class EqualityExpr : public CompoundExpr 
@@ -154,6 +162,7 @@ class EqualityExpr : public CompoundExpr
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env);
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class LogicalExpr : public CompoundExpr 
@@ -165,6 +174,7 @@ class LogicalExpr : public CompoundExpr
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env);
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class AssignExpr : public CompoundExpr 
@@ -175,6 +185,7 @@ class AssignExpr : public CompoundExpr
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env);
+    int Emit(CodeGenerator *cg);
 };
 
 class LValue : public Expr 
@@ -223,6 +234,7 @@ class FieldAccess : public LValue
     void Check();
     Type *CheckType(EnvVector *env);
     char *GetFieldName() { return field->getName(); }
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 /* Like field access, call is used both for qualified base.field()
@@ -242,6 +254,7 @@ class Call : public Expr
     void Check();
     Type *CheckType(EnvVector *env);
     Expr *GetBase() { return base; }
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class NewExpr : public Expr

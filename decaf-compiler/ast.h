@@ -55,7 +55,7 @@ class Node
     yyltype *GetLocation()   { return location; }
     void SetParent(Node *p)  { parent = p; }
     Node *GetParent()        { return parent; }
-    virtual int Emit(CodeGenerator *cg) {;}
+    virtual int Emit(CodeGenerator *cg) { return 0;}
 };
    
 
