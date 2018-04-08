@@ -220,10 +220,17 @@ Type *AssignExpr::CheckType(EnvVector *env) {
 }
 
 int AssignExpr::Emit(CodeGenerator *cg) {
-    Location *l = left->GetMemLocation(cg);
     Location *r = right->GetMemLocation(cg);
 
-    cg->GenAssign(l, r);
+    if (dynamic_cast<ArrayAccess*>(left) != NULL) {
+        ArrayAccess *arr = dynamic_cast<ArrayAccess*>(left);
+        Location *l = arr->GetPtrLocation(cg);
+        cg->GenStore(l, r);
+    }
+    else {
+        Location *l = left->GetMemLocation(cg);
+        cg->GenAssign(l, r);
+    }
     return 0;
 }
 
@@ -402,6 +409,16 @@ Type *Call::CheckType(EnvVector *env) {
 }
 
 Location *Call::GetMemLocation(CodeGenerator *cg) {
+
+    // special case for arr.length()
+    if (base != NULL && 
+    dynamic_cast<ArrayType*>(base->GetResolvedType()) != NULL && 
+    strcmp(field->getName(), "length") == 0) {
+        Location *arraddr = base->GetMemLocation(cg);
+        Location *size = cg->GenLoad(arraddr, -CodeGenerator::VarSize);
+        return size;
+    }
+
     Decl *d;
     if (base == NULL) {
         d = env->Search(field->getName());
@@ -535,4 +552,63 @@ NewArrayExpr::NewArrayExpr(yyltype loc, Expr *sz, Type *et) : Expr(loc) {
     (elemType=et)->SetParent(this);
 }
 
-       
+Location *NewArrayExpr::GetMemLocation(CodeGenerator *cg) {
+    Location *sz = size->GetMemLocation(cg);
+
+    // check for < 0 size
+    Location *zero = cg->GenLoadConstant(0);
+    Location *test = cg->GenBinaryOp("<", sz, zero);
+    char *zerojmplabel = cg->NewLabel();
+    cg->GenIfZ(test, zerojmplabel);
+    Location *errormsg = cg->GenLoadConstant("runtime error: array size <= 0");
+    cg->GenBuiltInCall(PrintString, errormsg);
+    cg->GenBuiltInCall(Halt);
+
+    cg->GenLabel(zerojmplabel);
+    Location *arraysizeinc = cg->GenLoadConstant(1);
+    Location *numbytes = cg->GenBinaryOp("+", sz, arraysizeinc);
+    Location *typesizeof = cg->GenLoadConstant(CodeGenerator::VarSize);
+    Location *arraysize = cg->GenBinaryOp("*", typesizeof, numbytes);
+    Location *arrloc = cg->GenBuiltInCall(Alloc, arraysize);
+    // store size of array
+    cg->GenStore(arrloc, sz); 
+    Location *returnedArrLoc = cg->GenBinaryOp("+", arrloc, typesizeof);
+    return returnedArrLoc;
+}       
+
+Location *ArrayAccess::GetPtrLocation(CodeGenerator *cg) {
+
+    Location *arraddr = base->GetMemLocation(cg);
+    Location *index = subscript->GetMemLocation(cg);
+    /*
+    static int x = 0;
+    char c[10];
+    sprintf(c, "access %d\\n", x++);
+    Location *out = cg->GenLoadConstant(c);
+    cg->GenBuiltInCall(PrintString, out);
+    */
+    // oob tests
+    char *notoob = cg->NewLabel();
+    Location *zero = cg->GenLoadConstant(0);
+    Location *negindex = cg->GenBinaryOp("<", index, zero);
+    Location *arrsize = cg->GenLoad(arraddr, -CodeGenerator::VarSize);
+    Location *oob = cg->GenBinaryOp("<", arrsize, index);
+    Location *test = cg->GenBinaryOp("||", negindex, oob);
+    cg->GenIfZ(test, notoob);
+    Location *err = cg->GenLoadConstant("runtime error: index out of bounds");
+    cg->GenBuiltInCall(PrintString, err);
+    cg->GenBuiltInCall(Halt);
+
+    cg->GenLabel(notoob);
+    Location *varsize = cg->GenLoadConstant(CodeGenerator::VarSize);
+    Location *offset = cg->GenBinaryOp("*", varsize, index);
+    Location *addr = cg->GenBinaryOp("+", arraddr, offset);
+    
+    return addr;
+
+}
+
+Location *ArrayAccess::GetMemLocation(CodeGenerator *cg) {
+    Location *addr = GetPtrLocation(cg);
+    return cg->GenLoad(addr);
+}

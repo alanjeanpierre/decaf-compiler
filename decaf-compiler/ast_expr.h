@@ -30,6 +30,7 @@ class Expr : public Stmt
   public:
     Expr(yyltype loc) : Stmt(loc) {}
     Expr() : Stmt() {}
+    virtual ~Expr();
     virtual Type *CheckType(EnvVector *env) { return NULL; }
     Type *GetResolvedType() { return resolvedType; }
     virtual Location *GetMemLocation(CodeGenerator *cg) {;}
@@ -215,6 +216,8 @@ class ArrayAccess : public LValue
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env);
+    Location *GetMemLocation(CodeGenerator *cg);
+    Location *GetPtrLocation(CodeGenerator *cg);
 };
 
 /* Note that field access is used both for qualified names
@@ -280,6 +283,7 @@ class NewArrayExpr : public Expr
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env);
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class ReadIntegerExpr : public Expr

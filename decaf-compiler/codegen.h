@@ -49,7 +49,8 @@ class CodeGenerator {
 
     CodeGenerator();
 
-    int GetResetSpace() { int tmp = sp; sp = 0; return tmp; }
+    int GetStackSize() { return sp*4; }
+    void SetStackPtr(int numVars) { sp = numVars; }
     
          // Assigns a new unique label name and returns it. Does not
          // generate any Tac instructions (see GenLabel below if needed)

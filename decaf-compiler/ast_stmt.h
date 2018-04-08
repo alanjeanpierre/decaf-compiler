@@ -81,6 +81,7 @@ class ForStmt : public LoopStmt
   public:
     ForStmt(Expr *init, Expr *test, Expr *step, Stmt *body);
     void Check();
+    int Emit(CodeGenerator *cg);
 };
 
 class WhileStmt : public LoopStmt 
@@ -117,6 +118,7 @@ class ReturnStmt : public Stmt
     void Check();
 
     yyltype *GetLocation();
+    int Emit(CodeGenerator *cg);
 };
 
 class PrintStmt : public Stmt

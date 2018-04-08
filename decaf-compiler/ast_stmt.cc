@@ -91,8 +91,9 @@ void StmtBlock::Check() {
 
 int StmtBlock::Emit(CodeGenerator *cg) {
     int space = decls->NumElements();
+    cg->SetStackPtr(space);
     for (int i = 0; i < decls->NumElements(); i++) {
-        decls->Nth(i)->SetMemLocation(fpRelative, -i*4);
+        decls->Nth(i)->SetMemLocation(fpRelative, CodeGenerator::OffsetToFirstLocal - i * 4);
     }
 
     for (int i = 0; i < stmts->NumElements(); i++) {
@@ -215,7 +216,7 @@ int PrintStmt::Emit(CodeGenerator *cg) {
             cg->GenBuiltInCall(PrintInt, tmp);
         } else if (t->IsEquivalentTo(Type::boolType)) {
             cg->GenBuiltInCall(PrintInt, tmp);
-        } else { // not a constant
+        } else { 
                 // idk!!
                 ;
         }
@@ -233,4 +234,25 @@ void BreakStmt::Check() {
     }
 
     ReportError::BreakOutsideLoop(this);
+}
+
+int ReturnStmt::Emit(CodeGenerator *cg) {
+    Location *rval = NULL;
+    if (expr) 
+        rval = expr->GetMemLocation(cg);
+    cg->GenReturn(rval);
+}
+
+int ForStmt::Emit(CodeGenerator *cg) {
+    init->Emit(cg);
+    char *start = cg->NewLabel();
+    char *end = cg->NewLabel();
+    cg->GenLabel(start);
+    Location *t = test->GetMemLocation(cg);
+    cg->GenIfZ(t, end);
+    body->Emit(cg);
+    step->Emit(cg);
+    cg->GenGoto(start);
+    cg->GenLabel(end);
+    return 0;
 }

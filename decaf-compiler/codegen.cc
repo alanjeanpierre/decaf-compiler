@@ -32,7 +32,7 @@ Location *CodeGenerator::GenTempVar()
   static int nextTempNum;
   char temp[10];
   sprintf(temp, "_tmp%d", nextTempNum++);
-  Location *result = new Location(fpRelative, sp++*4, temp);
+  Location *result = new Location(fpRelative, OffsetToFirstLocal - (sp++*4), temp);
   /* pp5: need to create variable in proper location
      in stack frame for use as temporary. Until you
      do that, the assert below will always fail to remind

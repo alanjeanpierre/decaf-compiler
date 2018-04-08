@@ -318,17 +318,17 @@ Type *InterfaceDecl::GetType() {
 int FnDecl::Emit(CodeGenerator *cg) {
     for (int i = 0; i < formals->NumElements(); i++) {
         // leave room for this pointer
-        formals->Nth(i)->SetMemLocation(fpRelative, i*4);
+        formals->Nth(i)->SetMemLocation(fpRelative, CodeGenerator::OffsetToFirstParam + i*4);
     }
     cg->GenLabel(this->getName());
     BeginFunc* b = cg->GenBeginFunc();
-    int space = body->Emit(cg);
-    space += cg->GetResetSpace()*4;
+    int bodySpace = body->Emit(cg);
     cg->GenEndFunc();
 
-    b->SetFrameSize(space);
+    int totalSpace = cg->GetStackSize();
+    b->SetFrameSize(totalSpace);
 
-    return space;
+    return totalSpace;
 
 }
 
