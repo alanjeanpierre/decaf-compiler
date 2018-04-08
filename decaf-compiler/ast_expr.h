@@ -30,7 +30,6 @@ class Expr : public Stmt
   public:
     Expr(yyltype loc) : Stmt(loc) {}
     Expr() : Stmt() {}
-    virtual ~Expr();
     virtual Type *CheckType(EnvVector *env) { return NULL; }
     Type *GetResolvedType() { return resolvedType; }
     virtual Location *GetMemLocation(CodeGenerator *cg) {;}
@@ -230,6 +229,7 @@ class FieldAccess : public LValue
   protected:
     Expr *base;	// will be NULL if no explicit base
     Identifier *field;
+    ClassDecl *GetClassFromImplicitThis();
     
   public:
     FieldAccess(Expr *base, Identifier *field); //ok to pass NULL base
@@ -238,6 +238,8 @@ class FieldAccess : public LValue
     Type *CheckType(EnvVector *env);
     char *GetFieldName() { return field->getName(); }
     Location *GetMemLocation(CodeGenerator *cg);
+    int GetOffset() { return GetClassFromImplicitThis()->GetVarOffset(GetFieldName()); }
+    bool IsMemberVariable();
 };
 
 /* Like field access, call is used both for qualified base.field()
@@ -250,6 +252,7 @@ class Call : public Expr
     Expr *base;	// will be NULL if no explicit base
     Identifier *field;
     List<Expr*> *actuals;
+    ClassDecl * GetClassFromImplicitThis();
     
   public:
     Call(yyltype loc, Expr *base, Identifier *field, List<Expr*> *args);
@@ -258,6 +261,7 @@ class Call : public Expr
     Type *CheckType(EnvVector *env);
     Expr *GetBase() { return base; }
     Location *GetMemLocation(CodeGenerator *cg);
+    int Emit(CodeGenerator *cg);
 };
 
 class NewExpr : public Expr
@@ -270,6 +274,7 @@ class NewExpr : public Expr
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env);
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class NewArrayExpr : public Expr

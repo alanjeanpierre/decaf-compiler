@@ -45,7 +45,8 @@ class Decl : public Node
 
     void SetMemLocation(Segment s, int offset);
     Location *GetMemLocation(CodeGenerator *cg) { return memlocation; }
-    int EmitClass(CodeGenerator *cg) {;}
+    virtual int EmitClass(CodeGenerator *cg) {;}
+    void SetID(char *s) { id->setName(s); }
 };
 
 class VarDecl : public Decl 
@@ -77,6 +78,7 @@ class ClassDecl : public Decl
   private:
     bool checked;
     EnvVector *inheritanceVector;
+    int ndecls;
 
   protected:
     List<Decl*> *members;
@@ -99,6 +101,9 @@ class ClassDecl : public Decl
     Type *GetType();
 
     int Emit(CodeGenerator *cg);
+    int GetNumDecls() { return ndecls; }
+    int GetVarOffset(char *fieldname);
+    int GetFnOffset(char *fieldname);
 };
 
 class InterfaceDecl : public Decl 

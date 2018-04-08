@@ -151,11 +151,12 @@ void ClassDecl::CheckInheritance() {
 
 void ClassDecl::CheckFunctions() {
 
+    ndecls = 0;
     for (int i = 0; i < members->NumElements(); i++) {
         members->Nth(i)->Check();
-        //if (FnDecl* dfn = dynamic_cast<FnDecl*>(members->Nth(i))) {
-        //    dfn->Check();
-        //}
+        if (VarDecl* var = dynamic_cast<VarDecl*>(members->Nth(i))) {
+            ndecls++;
+        }
     }
     
 }
@@ -172,9 +173,18 @@ void ClassDecl::CheckImplements() {
 
 int ClassDecl::Emit(CodeGenerator *cg) {
     int space = 0;
+    List<const char*> *methodLabels = new List<const char*>();
     for (int i = 0; i < members->NumElements(); i++) {
+        if (FnDecl* var = dynamic_cast<FnDecl*>(members->Nth(i))) {
+            std::string *s = new std::string(var->getName());
+            s->insert(s->begin(), *(std::string("_") + std::string(getName()) + std::string(".")).c_str());
+            methodLabels->Append(s->c_str());
+            var->SetID((char*)s->c_str());
+        }
         space += members->Nth(i)->EmitClass(cg);
     }
+
+    cg->GenVTable(getName(), methodLabels);
 
     return space;
 }
@@ -317,7 +327,6 @@ Type *InterfaceDecl::GetType() {
 
 int FnDecl::Emit(CodeGenerator *cg) {
     for (int i = 0; i < formals->NumElements(); i++) {
-        // leave room for this pointer
         formals->Nth(i)->SetMemLocation(fpRelative, CodeGenerator::OffsetToFirstParam + i*4);
     }
     cg->GenLabel(this->getName());
@@ -335,12 +344,43 @@ int FnDecl::Emit(CodeGenerator *cg) {
 int FnDecl::EmitClass(CodeGenerator *cg) {
     for (int i = 0; i < formals->NumElements(); i++) {
         // leave room for this pointer
-        formals->Nth(i)->SetMemLocation(fpRelative, (i+1)*4);
+        formals->Nth(i)->SetMemLocation(fpRelative, CodeGenerator::OffsetToFirstParam + (1+i)*4);
     }
     cg->GenLabel(this->getName());
     BeginFunc* b = cg->GenBeginFunc();
     int space = body->Emit(cg);
     cg->GenEndFunc();
 
-    b->SetFrameSize(space);
+    int totalSpace = cg->GetStackSize();
+
+    b->SetFrameSize(totalSpace);
+    return totalSpace;
+}
+
+int ClassDecl::GetVarOffset(char *fieldname) {
+    int offset = 1;
+    for (int i = 0; i < members->NumElements(); i++) {
+        if (VarDecl *v = dynamic_cast<VarDecl*>(members->Nth(i))) {
+            if (strcmp(v->getName(), fieldname) == 0) {
+                return offset;
+            }
+            offset++;
+        }
+    }
+
+    return -1;
+}
+
+int ClassDecl::GetFnOffset(char *fieldname) {
+    int offset = 0;
+    for (int i = 0; i < members->NumElements(); i++) {
+        if (FnDecl *v = dynamic_cast<FnDecl*>(members->Nth(i))) {
+            if (strcmp(v->getName(), fieldname) == 0) {
+                return offset;
+            }
+            offset++;
+        }
+    }
+
+    return -1;
 }
