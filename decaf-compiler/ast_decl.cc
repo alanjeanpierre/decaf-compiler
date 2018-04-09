@@ -177,7 +177,7 @@ int ClassDecl::Emit(CodeGenerator *cg) {
     for (int i = 0; i < members->NumElements(); i++) {
         if (FnDecl* var = dynamic_cast<FnDecl*>(members->Nth(i))) {
             std::string *s = new std::string(var->getName());
-            s->insert(s->begin(), *(std::string("_") + std::string(getName()) + std::string(".")).c_str());
+            s->insert(0, (std::string("_") + std::string(getName()) + std::string(".")).c_str());
             methodLabels->Append(s->c_str());
             var->SetID((char*)s->c_str());
         }
