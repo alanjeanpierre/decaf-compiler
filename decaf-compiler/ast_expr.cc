@@ -200,9 +200,14 @@ Type *LogicalExpr::CheckType(EnvVector *env) {
 }
 
 Location *LogicalExpr::GetMemLocation(CodeGenerator *cg) {
-    Location *l = left->GetMemLocation(cg);
     Location *r = right->GetMemLocation(cg);
-    return cg->GenBinaryOp(op->GetOp(), l, r);
+    if (left == NULL) {// negation {
+        Location *l = cg->GenLoadConstant(0);
+        cg->GenBinaryOp("&&", l, r);
+    } else {
+        Location *l = left->GetMemLocation(cg);
+        return cg->GenBinaryOp(op->GetOp(), l, r);
+    }
 }
 
 void AssignExpr::Check() {
@@ -462,9 +467,12 @@ Location *Call::GetMemLocation(CodeGenerator *cg) {
         d = newEnv->Search(field->getName());
     }
 
+    List<Location*> params;
+    for (int i = 0; i < actuals->NumElements(); i++) {
+        params.Append(actuals->Nth(i)->GetMemLocation(cg));
+    }
     for (int i = actuals->NumElements()-1; i >= 0; i--) {
-        Location *t = actuals->Nth(i)->GetMemLocation(cg);
-        cg->GenPushParam(t);
+        cg->GenPushParam(params.Nth(i));
     }
 
     Location *r = cg->GenLCall(d->getName(), true);
@@ -699,10 +707,15 @@ Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
 int Call::Emit(CodeGenerator *cg) {
 
     // push params
-    for (int i = actuals->NumElements()-1; i >= 0; i--) {
-        Location *param = actuals->Nth(i)->GetMemLocation(cg);
-        cg->GenPushParam(param);
+    List<Location*> params;
+    for (int i = 0; i < actuals->NumElements(); i++) {
+        params.Append(actuals->Nth(i)->GetMemLocation(cg));
     }
+    for (int i = actuals->NumElements()-1; i >= 0; i--) {
+        cg->GenPushParam(params.Nth(i));
+    }
+
+
 
     if (base == NULL) {
         if (env->IsInClassScope()) {
@@ -718,6 +731,8 @@ int Call::Emit(CodeGenerator *cg) {
                 //Location *vtable = cg->GenLoad();
             }
 
+        } else {
+            cg->GenLCall(field->getName(), false);
         }
     } else {
         // please don't do ; arr.length(); kkk;;;
