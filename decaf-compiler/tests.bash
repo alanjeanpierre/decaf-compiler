@@ -26,14 +26,14 @@ do
         if [ $? -ne 0 -o -s tmp.errors ]; then
             # shoudl both have errors
             d="$(diff tmp.errors tmp2.errors -q 2>&1)"
-        elif [ "$(cat tmp.asm)" = "" ]; then
+        elif [ "$(cat tmp.asm)" = "" ] || [ "$(cat tmp2.asm)" = "" ]; then
             d="Segfault, probably";
         else 
             cat defs.asm >> tmp.asm
             cat defs.asm >> tmp2.asm
 
-            echo -e "-1\nCam" | spim  -trap_file trap.handler -file tmp.asm > tmp 2>&1
-            echo -e "-1\nCam" | spim -trap_file trap.handler -file tmp2.asm > tmp2 2>&1
+            echo -e `cat "$file.in"` | spim  -trap_file trap.handler -file tmp.asm > tmp 2>&1
+            echo -e `cat "$file.in"` | spim -trap_file trap.handler -file tmp2.asm > tmp2 2>&1
             d="$(diff tmp tmp2 -q 2>&1)"
         fi
 

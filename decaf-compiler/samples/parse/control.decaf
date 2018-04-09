@@ -15,7 +15,7 @@ void main() {
 
   for (; a <= 10 || done; a = a + 1) {
      Print(a, " ");
-     if (a == 10) a;
+     if (a == 10) break;
   }
   return;
 }
