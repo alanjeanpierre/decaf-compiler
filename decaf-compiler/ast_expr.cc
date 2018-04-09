@@ -448,41 +448,6 @@ Type *Call::CheckType(EnvVector *env) {
 
 }
 
-Location *Call::GetMemLocation(CodeGenerator *cg) {
-
-
-    // special case for arr.length()
-    if (base != NULL && 
-    dynamic_cast<ArrayType*>(base->GetResolvedType()) != NULL && 
-    strcmp(field->getName(), "length") == 0) {
-        Location *arraddr = base->GetMemLocation(cg);
-        Location *size = cg->GenLoad(arraddr, -CodeGenerator::VarSize);
-        return size;
-    }
-    Decl *d;
-    if (base == NULL) {
-        d = env->Search(field->getName());
-    } else {
-        EnvVector *newEnv = env->GetProperScope(env, base);
-        d = newEnv->Search(field->getName());
-    }
-
-    List<Location*> params;
-    for (int i = 0; i < actuals->NumElements(); i++) {
-        params.Append(actuals->Nth(i)->GetMemLocation(cg));
-    }
-    for (int i = actuals->NumElements()-1; i >= 0; i--) {
-        cg->GenPushParam(params.Nth(i));
-    }
-
-    Location *r = cg->GenLCall(d->getName(), true);
-    cg->GenPopParams(actuals->NumElements()*4);
-
-    return r;
-
-
-}
-
 void NewExpr::Check() {
     resolvedType = CheckType(env);
 }
@@ -701,6 +666,42 @@ Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
         Location *memloc = cg->GenLoad(CodeGenerator::ThisPtr, offset);
         return memloc;
     }
+
+}
+
+
+Location *Call::GetMemLocation(CodeGenerator *cg) {
+
+
+    // special case for arr.length()
+    if (base != NULL && 
+    dynamic_cast<ArrayType*>(base->GetResolvedType()) != NULL && 
+    strcmp(field->getName(), "length") == 0) {
+        Location *arraddr = base->GetMemLocation(cg);
+        Location *size = cg->GenLoad(arraddr, -CodeGenerator::VarSize);
+        return size;
+    }
+    Decl *d;
+    if (base == NULL) {
+        d = env->Search(field->getName());
+    } else {
+        EnvVector *newEnv = env->GetProperScope(env, base);
+        d = newEnv->Search(field->getName());
+    }
+
+    List<Location*> params;
+    for (int i = 0; i < actuals->NumElements(); i++) {
+        params.Append(actuals->Nth(i)->GetMemLocation(cg));
+    }
+    for (int i = actuals->NumElements()-1; i >= 0; i--) {
+        cg->GenPushParam(params.Nth(i));
+    }
+
+    Location *r = cg->GenLCall(d->getName(), true);
+    cg->GenPopParams(actuals->NumElements()*4);
+
+    return r;
+
 
 }
 

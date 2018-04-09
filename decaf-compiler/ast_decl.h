@@ -134,6 +134,7 @@ class FnDecl : public Decl
     List<VarDecl*> *formals;
     Type *returnType;
     Stmt *body;
+    const char *vtableid;
     
   public:
     FnDecl(Identifier *name, Type *returnType, List<VarDecl*> *formals);
@@ -152,6 +153,9 @@ class FnDecl : public Decl
 
     int Emit(CodeGenerator *cg);
     int EmitClass(CodeGenerator *cg);
+
+    void SetVTableID(const char *s) { vtableid = s; }
+    const char *GetVTableID() { return vtableid; }
 };
 
 #endif

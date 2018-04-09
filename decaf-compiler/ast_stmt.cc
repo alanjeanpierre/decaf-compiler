@@ -57,8 +57,7 @@ void Program::Emit() {
     bool foundMain = false;
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->SetMemLocation(gpRelative, i*4);
-        foundMain |= (strcmp(decls->Nth(i)->getName(), "main") == 0);            
-        
+        foundMain |= (strcmp(decls->Nth(i)->getName(), "main") == 0);
     }
 
 
@@ -226,7 +225,7 @@ int PrintStmt::Emit(CodeGenerator *cg) {
         } else if (t->IsEquivalentTo(Type::intType)) {
             cg->GenBuiltInCall(PrintInt, tmp);
         } else if (t->IsEquivalentTo(Type::boolType)) {
-            cg->GenBuiltInCall(PrintInt, tmp);
+            cg->GenBuiltInCall(PrintBool, tmp);
         } else { 
                 // idk!!
                 ;

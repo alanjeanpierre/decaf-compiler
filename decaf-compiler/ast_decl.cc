@@ -135,6 +135,11 @@ void ClassDecl::CheckInheritance() {
         Decl* n = members->Nth(i);
         env->InsertIfNotExists(n);
         n->SetEnv(env);
+        if (FnDecl* var = dynamic_cast<FnDecl*>(members->Nth(i))) {
+            std::string *s = new std::string(var->getName());
+            s->insert(0, (std::string("_") + std::string(getName()) + std::string(".")).c_str());
+            var->SetVTableID(s->c_str());
+        }
         //n->Check();
     }
     
@@ -176,10 +181,7 @@ int ClassDecl::Emit(CodeGenerator *cg) {
     List<const char*> *methodLabels = new List<const char*>();
     for (int i = 0; i < members->NumElements(); i++) {
         if (FnDecl* var = dynamic_cast<FnDecl*>(members->Nth(i))) {
-            std::string *s = new std::string(var->getName());
-            s->insert(0, (std::string("_") + std::string(getName()) + std::string(".")).c_str());
-            methodLabels->Append(s->c_str());
-            var->SetID((char*)s->c_str());
+            methodLabels->Append(var->GetVTableID());
         }
         space += members->Nth(i)->EmitClass(cg);
     }
@@ -347,7 +349,7 @@ int FnDecl::EmitClass(CodeGenerator *cg) {
         // leave room for this pointer
         formals->Nth(i)->SetMemLocation(fpRelative, CodeGenerator::OffsetToFirstParam + (1+i)*4);
     }
-    cg->GenLabel(this->getName());
+    cg->GenLabel(this->GetVTableID());
     BeginFunc* b = cg->GenBeginFunc();
     int space = body->Emit(cg);
     cg->GenEndFunc();
@@ -374,9 +376,10 @@ int ClassDecl::GetVarOffset(char *fieldname) {
 
 int ClassDecl::GetFnOffset(char *fieldname) {
     int offset = 0;
+    int stroffset = strlen(getName()) + 2;
     for (int i = 0; i < members->NumElements(); i++) {
         if (FnDecl *v = dynamic_cast<FnDecl*>(members->Nth(i))) {
-            if (strcmp(v->getName(), fieldname) == 0) {
+            if (strcmp(v->GetVTableID() + stroffset, fieldname) == 0) {
                 return offset;
             }
             offset++;
