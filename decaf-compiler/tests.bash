@@ -17,23 +17,26 @@ for folder in samples/*;
 do
     for file in $folder/*.decaf
     do 
+        tests=$((tests + 1))
+        echo -e -n "$file: "
         touch tmp.asm tmp.errors tmp2.asm tmp2.errors tmp tmp2
-        ./dcc < "$file" > tmp.asm 2>tmp.errors
+        ./dcc < "$file" > tmp.asm 2>tmp.errors |:
         solutions/dcc < "$file" > tmp2.asm 2>tmp2.errors
         d=""
         if [ $? -ne 0 -o -s tmp.errors ]; then
             # shoudl both have errors
             d="$(diff tmp.errors tmp2.errors -q 2>&1)"
+        elif [ "$(cat tmp.asm)" = "" ]; then
+            d="Segfault, probably";
         else 
             cat defs.asm >> tmp.asm
             cat defs.asm >> tmp2.asm
 
-            spim  -trap_file trap.handler -file tmp.asm > tmp 2>&1
-            spim -trap_file trap.handler -file tmp2.asm > tmp2 2>&1
+            echo -e "-1\nCam" | spim  -trap_file trap.handler -file tmp.asm > tmp 2>&1
+            echo -e "-1\nCam" | spim -trap_file trap.handler -file tmp2.asm > tmp2 2>&1
             d="$(diff tmp tmp2 -q 2>&1)"
         fi
 
-        echo -e -n "$file: "
 
         if [ "$d" != "" ]
         then
