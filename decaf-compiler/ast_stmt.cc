@@ -285,7 +285,7 @@ int IfStmt::Emit(CodeGenerator *cg) {
     char *post = cg->NewLabel();
     char *iffalse = post;
     if (elseBody != NULL)
-        char *iffalse = cg->NewLabel();
+        iffalse = cg->NewLabel();
     Location *t = test->GetMemLocation(cg);
     cg->GenIfZ(t, iffalse);
     body->Emit(cg);
