@@ -17,12 +17,24 @@ for folder in samples/*;
 do
     for file in $folder/*.decaf
     do 
-        tests=$((tests + 1))
-        solutions/dcc < "$file" > "$file.out" 2>&1
-        out="$file.out"
+        touch tmp.asm tmp.errors tmp2.asm tmp2.errors tmp tmp2
+        ./dcc < "$file" > tmp.asm 2>tmp.errors
+        solutions/dcc < "$file" > tmp2.asm 2>tmp2.errors
+        d=""
+        if [ $? -ne 0 -o -s tmp.errors ]; then
+            # shoudl both have errors
+            d="$(diff tmp.errors tmp2.errors -q 2>&1)"
+        else 
+            cat defs.asm >> tmp.asm
+            cat defs.asm >> tmp2.asm
+
+            spim  -trap_file trap.handler -file tmp.asm > tmp 2>&1
+            spim -trap_file trap.handler -file tmp2.asm > tmp2 2>&1
+            d="$(diff tmp tmp2 -q 2>&1)"
+        fi
+
         echo -e -n "$file: "
 
-        d="$(./dcc < $file 2>&1 | diff - $out -q 2>&1)"
         if [ "$d" != "" ]
         then
             echo -e "\e[91mTest fail\e[39m"
@@ -41,7 +53,7 @@ do
 
         fi
 
-        rm "$file.out"
+        rm tmp.asm tmp.errors tmp2.asm tmp2.errors tmp tmp2
     done
 done
     
