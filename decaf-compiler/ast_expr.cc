@@ -581,7 +581,7 @@ Location *NewArrayExpr::GetMemLocation(CodeGenerator *cg) {
     Location *test = cg->GenBinaryOp("<", sz, zero);
     char *zerojmplabel = cg->NewLabel();
     cg->GenIfZ(test, zerojmplabel);
-    Location *errormsg = cg->GenLoadConstant("runtime error: array size <= 0");
+    Location *errormsg = cg->GenLoadConstant(err_arr_bad_size);
     cg->GenBuiltInCall(PrintString, errormsg);
     cg->GenBuiltInCall(Halt);
 
@@ -616,7 +616,7 @@ Location *ArrayAccess::GetPtrLocation(CodeGenerator *cg) {
     Location *oob = cg->GenBinaryOp("<", arrsize, index);
     Location *test = cg->GenBinaryOp("||", negindex, oob);
     cg->GenIfZ(test, notoob);
-    Location *err = cg->GenLoadConstant("runtime error: index out of bounds");
+    Location *err = cg->GenLoadConstant(err_arr_out_of_bounds);
     cg->GenBuiltInCall(PrintString, err);
     cg->GenBuiltInCall(Halt);
 

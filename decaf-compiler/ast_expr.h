@@ -253,6 +253,7 @@ class Call : public Expr
     Identifier *field;
     List<Expr*> *actuals;
     ClassDecl * GetClassFromImplicitThis();
+    char *GetBaseName() { }
     
   public:
     Call(yyltype loc, Expr *base, Identifier *field, List<Expr*> *args);

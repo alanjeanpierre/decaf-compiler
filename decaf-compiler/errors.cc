@@ -178,6 +178,10 @@ void ReportError::BreakOutsideLoop(BreakStmt *bStmt) {
     OutputError(bStmt->GetLocation(), "break is only allowed inside a loop");
 }
   
+void ReportError::NoMainFound() {
+    OutputError(NULL, "Linker: function 'main' not defined");
+}
+  
 /* Function: yyerror()
  * -------------------
  * Standard error-reporting function expected by yacc. Our version merely
