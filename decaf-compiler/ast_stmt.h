@@ -68,9 +68,13 @@ class ConditionalStmt : public Stmt
 
 class LoopStmt : public ConditionalStmt 
 {
+  protected:
+    char *beginlbl;
+    char *endlbl;
   public:
     LoopStmt(Expr *testExpr, Stmt *body)
             : ConditionalStmt(testExpr, body) {}
+    char *GetEndLbl() { return endlbl; }
 };
 
 class ForStmt : public LoopStmt 
@@ -108,6 +112,7 @@ class BreakStmt : public Stmt
   public:
     BreakStmt(yyltype loc) : Stmt(loc) {}
     void Check();
+    int Emit(CodeGenerator *cg);
 };
 
 class ReturnStmt : public Stmt  

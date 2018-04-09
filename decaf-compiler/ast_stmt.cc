@@ -258,6 +258,7 @@ int ForStmt::Emit(CodeGenerator *cg) {
     init->Emit(cg);
     char *start = cg->NewLabel();
     char *end = cg->NewLabel();
+    endlbl = end;
     cg->GenLabel(start);
     Location *t = test->GetMemLocation(cg);
     cg->GenIfZ(t, end);
@@ -271,6 +272,7 @@ int ForStmt::Emit(CodeGenerator *cg) {
 int WhileStmt::Emit(CodeGenerator *cg) {
     char *start = cg->NewLabel();
     char *end = cg->NewLabel();
+    endlbl = end;
     cg->GenLabel(start);
     Location *t = test->GetMemLocation(cg);
     cg->GenIfZ(t, end);
@@ -280,15 +282,32 @@ int WhileStmt::Emit(CodeGenerator *cg) {
 }
 
 int IfStmt::Emit(CodeGenerator *cg) {
-    char *iftrue = cg->NewLabel();
     char *post = cg->NewLabel();
+    char *iffalse = post;
+    if (elseBody != NULL)
+        char *iffalse = cg->NewLabel();
     Location *t = test->GetMemLocation(cg);
-    cg->GenIfZ(t, iftrue);
-    
-    if (elseBody != NULL) 
-        elseBody->Emit(cg);
-    cg->GenGoto(post);
-    cg->GenLabel(iftrue);
+    cg->GenIfZ(t, iffalse);
     body->Emit(cg);
+    if (elseBody != NULL) {
+        cg->GenGoto(post);
+        cg->GenLabel(iffalse);
+        elseBody->Emit(cg);
+    }
     cg->GenLabel(post);
 }
+
+int BreakStmt::Emit(CodeGenerator *cg) {
+    Node *loop = this;
+    char *endlbl;
+    while (loop) {
+        if (LoopStmt *p = dynamic_cast<LoopStmt*>(loop)) {
+            endlbl = p->GetEndLbl();
+            break;
+        }
+        loop = loop->GetParent();
+    }
+
+    cg->GenGoto(endlbl);
+}
+

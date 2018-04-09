@@ -736,3 +736,11 @@ int Call::Emit(CodeGenerator *cg) {
 
     cg->GenPopParams(actuals->NumElements() * CodeGenerator::VarSize);
 }
+
+Location *ReadIntegerExpr::GetMemLocation(CodeGenerator *cg) {
+    return cg->GenBuiltInCall(ReadInteger);
+}
+
+Location *ReadLineExpr::GetMemLocation(CodeGenerator *cg) {
+    return cg->GenBuiltInCall(ReadLine);
+}

@@ -299,6 +299,7 @@ class ReadIntegerExpr : public Expr
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env) { return Type::intType; }
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class ReadLineExpr : public Expr
@@ -308,6 +309,7 @@ class ReadLineExpr : public Expr
     void Check(EnvVector *env) {;}
     void Check();
     Type *CheckType(EnvVector *env) { return Type::stringType; }
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
     
