@@ -161,7 +161,11 @@ Type *EqualityExpr::CheckType(EnvVector *env) {
 Location *EqualityExpr::GetMemLocation(CodeGenerator *cg) {
     Location *l = left->GetMemLocation(cg);
     Location *r = right->GetMemLocation(cg);
-    return cg->GenBinaryOp(op->GetOp(), l, r);
+    if (left->GetResolvedType()->IsEquivalentTo(Type::stringType)) {
+        cg->GenBuiltInCall(StringEqual, l, r);
+    } else {
+        return cg->GenBinaryOp(op->GetOp(), l, r);
+    }
 }
 
 
