@@ -266,7 +266,8 @@ Expr      :    LValue               { $$ = $1; }
 
 Constant  :    T_IntConstant        { $$ = new IntConstant(@1,$1); }
           |    T_BoolConstant       { $$ = new BoolConstant(@1,$1); }
-          |    T_DoubleConstant     { $$ = new DoubleConstant(@1,$1); }
+          |    T_DoubleConstant     { ReportError::Formatted(&@1, "No code gen for doubles");
+                                      $$ = new IntConstant(@1,$1); }
           |    T_StringConstant     { $$ = new StringConstant(@1,$1); }
           |    T_Null               { $$ = new NullConstant(@1); }
           ;
