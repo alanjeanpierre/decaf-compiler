@@ -127,7 +127,8 @@ Variable  :    Type T_Identifier    { $$ = new VarDecl(new Identifier(@2, $2), $
 Type      :    T_Int                { $$ = Type::intType; }
           |    T_Bool               { $$ = Type::boolType; }
           |    T_String             { $$ = Type::stringType; }
-          |    T_Double             { $$ = Type::doubleType; }
+          |    T_Double             { ReportError::Formatted(&@1, "No code gen for doubles");
+                                      $$ = Type::errorType;  }
           |    T_Identifier         { $$ = new NamedType(new Identifier(@1,$1)); }
           |    Type T_Dims          { $$ = new ArrayType(Join(@1, @2), $1); }
           ;
