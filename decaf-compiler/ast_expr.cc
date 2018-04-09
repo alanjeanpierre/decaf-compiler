@@ -125,14 +125,23 @@ Type *RelationalExpr::CheckType(EnvVector *env) {
 }
 
 Location *RelationalExpr::GetMemLocation(CodeGenerator *cg) {
+
+    if (strcmp(op->GetOp(), ">") == 0) {
+        Expr *tmp = left;
+        left = right;
+        right = tmp;
+        op = new Operator(*op->GetLocation(), "<");
+    } else if (strcmp(op->GetOp(), ">=") == 0) {
+        Expr *tmp = left;
+        left = right;
+        right = tmp;
+        op = new Operator(*op->GetLocation(), "<=");
+    }
+
     Location *l = left->GetMemLocation(cg);
     Location *r = right->GetMemLocation(cg);
     if (strcmp(op->GetOp(), "<=") == 0) {
         Location *lt = cg->GenBinaryOp("<", l, r);
-        Location *eq = cg->GenBinaryOp("==", l, r);
-        return cg->GenBinaryOp("||", lt, eq);
-    } else if (strcmp(op->GetOp(), ">=") == 0) {
-        Location *lt = cg->GenBinaryOp(">", l, r);
         Location *eq = cg->GenBinaryOp("==", l, r);
         return cg->GenBinaryOp("||", lt, eq);
     } else {
@@ -161,11 +170,20 @@ Type *EqualityExpr::CheckType(EnvVector *env) {
 Location *EqualityExpr::GetMemLocation(CodeGenerator *cg) {
     Location *l = left->GetMemLocation(cg);
     Location *r = right->GetMemLocation(cg);
+    Location *b;
     if (left->GetResolvedType()->IsEquivalentTo(Type::stringType)) {
-        cg->GenBuiltInCall(StringEqual, l, r);
+        b = cg->GenBuiltInCall(StringEqual, l, r);
     } else {
-        return cg->GenBinaryOp(op->GetOp(), l, r);
+        b = cg->GenBinaryOp("==", l, r);
     }
+
+    if (strcmp(op->GetOp(), "!=") == 0) {
+        Location *zero = cg->GenLoadConstant(0);
+        b = cg->GenBinaryOp("==", b, zero);
+    }
+
+    return b;
+
 }
 
 
