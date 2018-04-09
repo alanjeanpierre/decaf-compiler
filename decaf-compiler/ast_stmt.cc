@@ -56,6 +56,9 @@ void Program::Emit() {
     CodeGenerator *cg = new CodeGenerator();
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->SetMemLocation(gpRelative, i*4);
+    }
+
+    for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->Emit(cg);
     }
 
