@@ -54,15 +54,23 @@ void Program::Check() {
 
 void Program::Emit() {
     CodeGenerator *cg = new CodeGenerator();
+    bool foundMain = false;
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->SetMemLocation(gpRelative, i*4);
+        foundMain |= (strcmp(decls->Nth(i)->getName(), "main") == 0);            
+        
     }
+
 
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->Emit(cg);
     }
 
-    cg->DoFinalCodeGen();
+    if (!foundMain) {
+        ReportError::NoMainFound();
+    } else {
+        cg->DoFinalCodeGen();
+    }
 }
 
 StmtBlock::StmtBlock(List<VarDecl*> *d, List<Stmt*> *s) {
@@ -258,4 +266,29 @@ int ForStmt::Emit(CodeGenerator *cg) {
     cg->GenGoto(start);
     cg->GenLabel(end);
     return 0;
+}
+
+int WhileStmt::Emit(CodeGenerator *cg) {
+    char *start = cg->NewLabel();
+    char *end = cg->NewLabel();
+    cg->GenLabel(start);
+    Location *t = test->GetMemLocation(cg);
+    cg->GenIfZ(t, end);
+    body->Emit(cg);
+    cg->GenGoto(start);
+    cg->GenLabel(end);
+}
+
+int IfStmt::Emit(CodeGenerator *cg) {
+    char *iftrue = cg->NewLabel();
+    char *post = cg->NewLabel();
+    Location *t = test->GetMemLocation(cg);
+    cg->GenIfZ(t, iftrue);
+    
+    if (elseBody != NULL) 
+        elseBody->Emit(cg);
+    cg->GenGoto(post);
+    cg->GenLabel(iftrue);
+    body->Emit(cg);
+    cg->GenLabel(post);
 }

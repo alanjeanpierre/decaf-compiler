@@ -89,6 +89,7 @@ class WhileStmt : public LoopStmt
   public:
     WhileStmt(Expr *test, Stmt *body) : LoopStmt(test, body) {}
     void Check();
+    int Emit(CodeGenerator *cg);
 };
 
 class IfStmt : public ConditionalStmt 
@@ -99,6 +100,7 @@ class IfStmt : public ConditionalStmt
   public:
     IfStmt(Expr *test, Stmt *thenBody, Stmt *elseBody);
     void Check();
+    int Emit(CodeGenerator *cg);
 };
 
 class BreakStmt : public Stmt 
