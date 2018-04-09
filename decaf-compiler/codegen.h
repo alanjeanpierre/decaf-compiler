@@ -50,7 +50,8 @@ class CodeGenerator {
     CodeGenerator();
 
     int GetStackSize() { return sp*4; }
-    void SetStackPtr(int numVars) { sp = numVars; }
+    void SetStackPtr() { sp = 0; }
+    void AddStackVar() { sp += 1; }
     
          // Assigns a new unique label name and returns it. Does not
          // generate any Tac instructions (see GenLabel below if needed)

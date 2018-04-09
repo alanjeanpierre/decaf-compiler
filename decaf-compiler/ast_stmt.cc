@@ -91,9 +91,9 @@ void StmtBlock::Check() {
 
 int StmtBlock::Emit(CodeGenerator *cg) {
     int space = decls->NumElements();
-    cg->SetStackPtr(space);
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->SetMemLocation(fpRelative, CodeGenerator::OffsetToFirstLocal - i * 4);
+        cg->AddStackVar();
     }
 
     for (int i = 0; i < stmts->NumElements(); i++) {

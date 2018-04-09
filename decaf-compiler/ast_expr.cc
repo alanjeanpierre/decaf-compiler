@@ -127,7 +127,17 @@ Type *RelationalExpr::CheckType(EnvVector *env) {
 Location *RelationalExpr::GetMemLocation(CodeGenerator *cg) {
     Location *l = left->GetMemLocation(cg);
     Location *r = right->GetMemLocation(cg);
-    return cg->GenBinaryOp(op->GetOp(), l, r);
+    if (strcmp(op->GetOp(), "<=") == 0) {
+        Location *lt = cg->GenBinaryOp("<", l, r);
+        Location *eq = cg->GenBinaryOp("==", l, r);
+        return cg->GenBinaryOp("||", lt, eq);
+    } else if (strcmp(op->GetOp(), ">=") == 0) {
+        Location *lt = cg->GenBinaryOp(">", l, r);
+        Location *eq = cg->GenBinaryOp("==", l, r);
+        return cg->GenBinaryOp("||", lt, eq);
+    } else {
+        return cg->GenBinaryOp(op->GetOp(), l, r);
+    }
 }
 
 void EqualityExpr::Check() {
@@ -613,8 +623,9 @@ Location *ArrayAccess::GetPtrLocation(CodeGenerator *cg) {
     Location *zero = cg->GenLoadConstant(0);
     Location *negindex = cg->GenBinaryOp("<", index, zero);
     Location *arrsize = cg->GenLoad(arraddr, -CodeGenerator::VarSize);
-    Location *oob = cg->GenBinaryOp("<", arrsize, index);
-    Location *test = cg->GenBinaryOp("||", negindex, oob);
+    Location *oob1 = cg->GenBinaryOp("<", index, arrsize);
+    Location *oob2 = cg->GenBinaryOp("==", oob1, zero);
+    Location *test = cg->GenBinaryOp("||", negindex, oob2);
     cg->GenIfZ(test, notoob);
     Location *err = cg->GenLoadConstant(err_arr_out_of_bounds);
     cg->GenBuiltInCall(PrintString, err);

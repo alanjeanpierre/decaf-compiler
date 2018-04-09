@@ -331,6 +331,7 @@ int FnDecl::Emit(CodeGenerator *cg) {
     }
     cg->GenLabel(this->getName());
     BeginFunc* b = cg->GenBeginFunc();
+    cg->SetStackPtr();
     int bodySpace = body->Emit(cg);
     cg->GenEndFunc();
 
