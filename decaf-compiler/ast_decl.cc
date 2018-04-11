@@ -157,10 +157,14 @@ void ClassDecl::CheckInheritance() {
 void ClassDecl::CheckFunctions() {
 
     ndecls = 0;
+    methodLabels = new List<const char*>();
     for (int i = 0; i < members->NumElements(); i++) {
         members->Nth(i)->Check();
         if (VarDecl* var = dynamic_cast<VarDecl*>(members->Nth(i))) {
             ndecls++;
+        }
+        if (FnDecl* var = dynamic_cast<FnDecl*>(members->Nth(i))) {
+            methodLabels->Append(var->GetVTableID());
         }
     }
     
@@ -178,11 +182,7 @@ void ClassDecl::CheckImplements() {
 
 int ClassDecl::Emit(CodeGenerator *cg) {
     int space = 0;
-    List<const char*> *methodLabels = new List<const char*>();
     for (int i = 0; i < members->NumElements(); i++) {
-        if (FnDecl* var = dynamic_cast<FnDecl*>(members->Nth(i))) {
-            methodLabels->Append(var->GetVTableID());
-        }
         space += members->Nth(i)->EmitClass(cg);
     }
 
@@ -345,7 +345,6 @@ int FnDecl::Emit(CodeGenerator *cg) {
 }
 
 int FnDecl::EmitClass(CodeGenerator *cg) {
-    std::cerr << "Emitting " << GetVTableID() << std::endl;
     for (int i = 0; i < formals->NumElements(); i++) {
         // leave room for this pointer
         formals->Nth(i)->SetMemLocation(fpRelative, CodeGenerator::OffsetToFirstParam + (1+i)*4);
@@ -359,7 +358,6 @@ int FnDecl::EmitClass(CodeGenerator *cg) {
     int totalSpace = cg->GetStackSize();
 
     b->SetFrameSize(totalSpace);
-    std::cerr << "Done" << std::endl;
     return totalSpace;
 }
 

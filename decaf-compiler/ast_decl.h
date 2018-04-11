@@ -79,6 +79,7 @@ class ClassDecl : public Decl
     bool checked;
     EnvVector *inheritanceVector;
     int ndecls;
+    List<const char*> *methodLabels;
 
   protected:
     List<Decl*> *members;

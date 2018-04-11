@@ -691,18 +691,23 @@ Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
 
 }
 
+bool Call::isArrLength() {
+    return base != NULL && 
+    dynamic_cast<ArrayType*>(base->GetResolvedType()) != NULL && 
+    strcmp(field->getName(), "length") == 0;
+}
 
 Location *Call::GetMemLocation(CodeGenerator *cg) {
 
 
     // special case for arr.length()
-    if (base != NULL && 
-    dynamic_cast<ArrayType*>(base->GetResolvedType()) != NULL && 
-    strcmp(field->getName(), "length") == 0) {
+    if (isArrLength()) {
         Location *arraddr = base->GetMemLocation(cg);
         Location *size = cg->GenLoad(arraddr, -CodeGenerator::VarSize);
         return size;
     }
+
+    /*
     Decl *d;
     if (base == NULL) {
         d = env->Search(field->getName());
@@ -710,6 +715,7 @@ Location *Call::GetMemLocation(CodeGenerator *cg) {
         EnvVector *newEnv = env->GetProperScope(env, base);
         d = newEnv->Search(field->getName());
     }
+    */
 
     List<Location*> params;
     for (int i = 0; i < actuals->NumElements(); i++) {
@@ -719,10 +725,44 @@ Location *Call::GetMemLocation(CodeGenerator *cg) {
         cg->GenPushParam(params.Nth(i));
     }
 
-    Location *r = cg->GenLCall(d->getName(), true);
-    cg->GenPopParams(actuals->NumElements()*4);
+    Location *rvalue;
+    if (base == NULL) {
+        if (env->IsInClassScope()) {
+            ClassDecl *cdecl = GetClassFromImplicitThis();
+            int offset = cdecl->GetFnOffset(field->getName());
+            if (offset == -1) {
+                // global func
+                cg->GenLCall(field->getName(), false);    
+            } else {
 
-    return r;
+                // else, member function, so push thisptr
+                cg->GenPushParam(cg->ThisPtr);
+                Location *vtable = cg->GenLoad(cg->ThisPtr, 0);
+                ClassDecl *cdecl = GetClassFromImplicitThis();
+                int offset = cdecl->GetFnOffset(GetFieldName());
+                Location *fn = cg->GenLoad(vtable, offset *CodeGenerator::VarSize);
+                rvalue = cg->GenACall(fn, true);
+            }
+
+        } else {
+            rvalue = cg->GenLCall(field->getName(), true);
+        }
+    } else {
+        // please don't do ; arr.length(); kkk;;;
+        Location *thisptr = base->GetMemLocation(cg);
+        Location *vtable = cg->GenLoad(thisptr, 0);
+        ClassDecl *cdecl = dynamic_cast<ClassDecl*>(env->GetTypeDecl(base->GetResolvedType()->getName()));
+        int offset = cdecl->GetFnOffset(field->getName());
+
+        Location *fn = cg->GenLoad(vtable, offset*CodeGenerator::VarSize);
+        cg->GenPushParam(thisptr);
+        rvalue = cg->GenACall(fn, true);
+    }
+
+    cg->GenPopParams(actuals->NumElements() * CodeGenerator::VarSize);
+
+
+    return rvalue;
 
 
 }
@@ -751,7 +791,11 @@ int Call::Emit(CodeGenerator *cg) {
 
                 // else, member function, so push thisptr
                 cg->GenPushParam(cg->ThisPtr);
-                //Location *vtable = cg->GenLoad();
+                Location *vtable = cg->GenLoad(cg->ThisPtr, 0);
+                ClassDecl *cdecl = GetClassFromImplicitThis();
+                int offset = cdecl->GetFnOffset(GetFieldName());
+                Location *fn = cg->GenLoad(vtable, offset *CodeGenerator::VarSize);
+                cg->GenACall(fn, false);
             }
 
         } else {
@@ -761,16 +805,7 @@ int Call::Emit(CodeGenerator *cg) {
         // please don't do ; arr.length(); kkk;;;
         Location *thisptr = base->GetMemLocation(cg);
         Location *vtable = cg->GenLoad(thisptr, 0);
-        char *f;
-        if (FieldAccess *b = dynamic_cast<FieldAccess*>(base))
-            f = b->GetFieldName();
-        else if (Call * b = dynamic_cast<Call*>(base))
-            f = b->GetFieldName();
-        
-        std::cerr << "HERE" << " " << f << std::endl;
-        Decl *var = env->Search(f);
-        std::cerr << ((var == NULL) ? "null" : "nonnull" ) << std::endl;
-        ClassDecl *cdecl = dynamic_cast<ClassDecl*>(env->GetTypeDecl(var->GetType()->getName()));
+        ClassDecl *cdecl = dynamic_cast<ClassDecl*>(env->GetTypeDecl(base->GetResolvedType()->getName()));
         int offset = cdecl->GetFnOffset(field->getName());
 
         Location *fn = cg->GenLoad(vtable, offset*CodeGenerator::VarSize);
@@ -780,7 +815,6 @@ int Call::Emit(CodeGenerator *cg) {
     }
 
     cg->GenPopParams(actuals->NumElements() * CodeGenerator::VarSize);
-    std::cerr << "THERE" << std::endl;
 }
 
 Location *ReadIntegerExpr::GetMemLocation(CodeGenerator *cg) {
