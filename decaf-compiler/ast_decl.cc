@@ -345,10 +345,12 @@ int FnDecl::Emit(CodeGenerator *cg) {
 }
 
 int FnDecl::EmitClass(CodeGenerator *cg) {
+    std::cerr << "Emitting " << GetVTableID() << std::endl;
     for (int i = 0; i < formals->NumElements(); i++) {
         // leave room for this pointer
         formals->Nth(i)->SetMemLocation(fpRelative, CodeGenerator::OffsetToFirstParam + (1+i)*4);
     }
+
     cg->GenLabel(this->GetVTableID());
     BeginFunc* b = cg->GenBeginFunc();
     int space = body->Emit(cg);
@@ -357,6 +359,7 @@ int FnDecl::EmitClass(CodeGenerator *cg) {
     int totalSpace = cg->GetStackSize();
 
     b->SetFrameSize(totalSpace);
+    std::cerr << "Done" << std::endl;
     return totalSpace;
 }
 

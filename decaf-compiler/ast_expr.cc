@@ -258,6 +258,7 @@ Type *AssignExpr::CheckType(EnvVector *env) {
 }
 
 int AssignExpr::Emit(CodeGenerator *cg) {
+
     Location *r = right->GetMemLocation(cg);
 
     if (dynamic_cast<ArrayAccess*>(left) != NULL) {
@@ -273,6 +274,7 @@ int AssignExpr::Emit(CodeGenerator *cg) {
         Location *l = left->GetMemLocation(cg);
         cg->GenAssign(l, r);
     }
+
     return 0;
 }
 
@@ -663,6 +665,7 @@ bool FieldAccess::IsMemberVariable() {
 }
 
 Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
+
     if (base == NULL) {
         if (env->IsInClassScope()) {
             ClassDecl *cdecl = GetClassFromImplicitThis();
@@ -684,6 +687,7 @@ Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
         Location *memloc = cg->GenLoad(CodeGenerator::ThisPtr, offset);
         return memloc;
     }
+    
 
 }
 
@@ -757,8 +761,15 @@ int Call::Emit(CodeGenerator *cg) {
         // please don't do ; arr.length(); kkk;;;
         Location *thisptr = base->GetMemLocation(cg);
         Location *vtable = cg->GenLoad(thisptr, 0);
-
-        Decl *var = env->Search(thisptr->GetName());
+        char *f;
+        if (FieldAccess *b = dynamic_cast<FieldAccess*>(base))
+            f = b->GetFieldName();
+        else if (Call * b = dynamic_cast<Call*>(base))
+            f = b->GetFieldName();
+        
+        std::cerr << "HERE" << " " << f << std::endl;
+        Decl *var = env->Search(f);
+        std::cerr << ((var == NULL) ? "null" : "nonnull" ) << std::endl;
         ClassDecl *cdecl = dynamic_cast<ClassDecl*>(env->GetTypeDecl(var->GetType()->getName()));
         int offset = cdecl->GetFnOffset(field->getName());
 
@@ -769,6 +780,7 @@ int Call::Emit(CodeGenerator *cg) {
     }
 
     cg->GenPopParams(actuals->NumElements() * CodeGenerator::VarSize);
+    std::cerr << "THERE" << std::endl;
 }
 
 Location *ReadIntegerExpr::GetMemLocation(CodeGenerator *cg) {
@@ -777,4 +789,8 @@ Location *ReadIntegerExpr::GetMemLocation(CodeGenerator *cg) {
 
 Location *ReadLineExpr::GetMemLocation(CodeGenerator *cg) {
     return cg->GenBuiltInCall(ReadLine);
+}
+
+Location *This::GetMemLocation(CodeGenerator *cg) {
+     return cg->ThisPtr;
 }

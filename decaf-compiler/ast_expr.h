@@ -204,6 +204,7 @@ class This : public Expr
     void Check();
     Type *CheckType(EnvVector *env);
     Decl *GetClass();
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class ArrayAccess : public LValue 
@@ -262,6 +263,7 @@ class Call : public Expr
     void Check();
     Type *CheckType(EnvVector *env);
     Expr *GetBase() { return base; }
+    char *GetFieldName() { return field->getName(); }
     Location *GetMemLocation(CodeGenerator *cg);
     int Emit(CodeGenerator *cg);
 };

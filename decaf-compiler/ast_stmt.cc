@@ -30,6 +30,7 @@ void Program::Check() {
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->CheckScope(env);
     }
+
     // check types
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->CheckTypes();
@@ -100,6 +101,7 @@ void StmtBlock::Check() {
 }
 
 int StmtBlock::Emit(CodeGenerator *cg) {
+
     int space = decls->NumElements();
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->SetMemLocation(fpRelative, CodeGenerator::OffsetToFirstLocal - i * 4);
@@ -108,6 +110,7 @@ int StmtBlock::Emit(CodeGenerator *cg) {
 
     for (int i = 0; i < stmts->NumElements(); i++) {
         space += stmts->Nth(i)->Emit(cg);
+        
     }
 
 
