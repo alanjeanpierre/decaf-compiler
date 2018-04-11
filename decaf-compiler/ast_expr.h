@@ -44,6 +44,7 @@ class EmptyExpr : public Expr
     Type *CheckType(EnvVector *env) { return Type::voidType; }
     void Check(EnvVector *env) {;}
     void Check() {;}
+    Location *GetMemLocation(CodeGenerator *cg) { return NULL; }
 };
 
 class IntConstant : public Expr 

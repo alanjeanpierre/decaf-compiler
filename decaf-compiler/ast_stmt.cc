@@ -247,9 +247,8 @@ void BreakStmt::Check() {
 }
 
 int ReturnStmt::Emit(CodeGenerator *cg) {
-    Location *rval = NULL;
-    if (expr) 
-        rval = expr->GetMemLocation(cg);
+
+    Location *rval = expr->GetMemLocation(cg);
     cg->GenReturn(rval);
 }
 
