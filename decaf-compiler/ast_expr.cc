@@ -257,27 +257,6 @@ Type *AssignExpr::CheckType(EnvVector *env) {
     }
 }
 
-int AssignExpr::Emit(CodeGenerator *cg) {
-
-    Location *r = right->GetMemLocation(cg);
-
-    if (dynamic_cast<ArrayAccess*>(left) != NULL) {
-        ArrayAccess *arr = dynamic_cast<ArrayAccess*>(left);
-        Location *l = arr->GetPtrLocation(cg);
-        cg->GenStore(l, r);
-    } else if (dynamic_cast<FieldAccess*>(left)->IsMemberVariable()) {
-        FieldAccess *member = dynamic_cast<FieldAccess*>(left);
-        int offset = member->GetOffset()*4;
-        cg->GenStore(CodeGenerator::ThisPtr, r, offset);
-    }
-    else {
-        Location *l = left->GetMemLocation(cg);
-        cg->GenAssign(l, r);
-    }
-
-    return 0;
-}
-
 void ArrayAccess::Check() {
     resolvedType = CheckType(env);
 }
@@ -655,6 +634,7 @@ Location *NewExpr::GetMemLocation(CodeGenerator *cg) {
 } 
 
 bool FieldAccess::IsMemberVariable() {
+
     ClassDecl* cdecl = GetClassFromImplicitThis();
     
     if (cdecl == NULL) return false;
@@ -664,31 +644,93 @@ bool FieldAccess::IsMemberVariable() {
     return offset != -1;
 }
 
+int FieldAccess::NScopesToParentFunc() {
+    Node *p = this;
+    int i = 0;
+    while (p) {
+        if (dynamic_cast<FnDecl*>(p)) 
+            break;
+        i++;
+        p = p->GetParent();
+    }
+    return i-1;
+}
+
+Location *FieldAccess::GetPtrLocation(CodeGenerator *cg) {
+    if (base == NULL) {
+        Decl *d = env->Search(field->getName());
+        int n = NScopesToParentFunc();
+        Decl *d2 = env->SearchN(d, n);
+        if (env->IsInClassScope() && d2 == NULL) {
+            return cg->ThisPtr;
+        } else {
+            return d->GetMemLocation(cg);
+        }
+    } else { 
+        return base->GetMemLocation(cg);
+    }
+}
+
 Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
 
     if (base == NULL) {
-        if (env->IsInClassScope()) {
-            ClassDecl *cdecl = GetClassFromImplicitThis();
-            int offset = cdecl->GetVarOffset(GetFieldName());
-            if (offset == -1) {
-                Decl *d = env->Search(field->getName());
-                return d->GetMemLocation(cg);
-            }
-            Location *memloc = cg->GenLoad(CodeGenerator::ThisPtr, offset * CodeGenerator::VarSize);
-            return memloc;
+        Decl *d = env->Search(field->getName());
+        int n = NScopesToParentFunc();
+        Decl *d2 = env->SearchN(d, n);
+        if (env->IsInClassScope() && d2 == NULL) {
+                ClassDecl *cdecl = GetClassFromImplicitThis();
+                int offset = cdecl->GetVarOffset(GetFieldName());
+                Location *memloc = cg->GenLoad(CodeGenerator::ThisPtr, offset * CodeGenerator::VarSize);
+                return memloc;
         } else {
-            Decl *d = env->Search(field->getName());
             return d->GetMemLocation(cg);
         }
-    } else { // must be this
-        Decl *d = dynamic_cast<This*>(base)->GetClass();
-        ClassDecl *c = dynamic_cast<ClassDecl*>(d);
+    } else { 
+        ClassDecl *c = dynamic_cast<ClassDecl*>(env->GetTypeDecl(base->GetResolvedType()->getName()));
+        Location *var = base->GetMemLocation(cg);
         int offset = c->GetVarOffset(GetFieldName()) * CodeGenerator::VarSize;
-        Location *memloc = cg->GenLoad(CodeGenerator::ThisPtr, offset);
+        Location *memloc = cg->GenLoad(var, offset);
         return memloc;
     }
     
 
+}
+
+void Call::LoadParams(CodeGenerator *cg) {
+    params = new List<Location*>();
+    for (int i = 0; i < actuals->NumElements(); i++) {
+        params->Append(actuals->Nth(i)->GetMemLocation(cg));
+    }
+} 
+
+void Call::PushParams(CodeGenerator *cg) {
+    for (int i = actuals->NumElements()-1; i >= 0; i--) {
+        cg->GenPushParam(params->Nth(i));
+    }
+}
+
+int Call::GetFnOffset() {
+    if (base) {
+        ClassDecl *c = dynamic_cast<ClassDecl*>(env->GetTypeDecl(base->GetResolvedType()->getName()));
+        return c->GetFnOffset(GetFieldName());
+    } else {
+        ClassDecl *cdecl = GetClassFromImplicitThis();
+        return cdecl->GetFnOffset(GetFieldName());
+    }
+}
+
+bool Call::isMethodCall() {
+    if (base == NULL) {
+        if (env->IsInClassScope()) {
+            ClassDecl *cdecl = GetClassFromImplicitThis();
+            int offset = cdecl->GetFnOffset(field->getName());
+            return offset != -1;
+        } else {
+            return false;
+        }
+    } else {
+        return true;
+    }
 }
 
 bool Call::isArrLength() {
@@ -716,23 +758,31 @@ Location *Call::GetMemLocation(CodeGenerator *cg) {
         d = newEnv->Search(field->getName());
     }
     */
-
-    List<Location*> params;
-    for (int i = 0; i < actuals->NumElements(); i++) {
-        params.Append(actuals->Nth(i)->GetMemLocation(cg));
-    }
-    for (int i = actuals->NumElements()-1; i >= 0; i--) {
-        cg->GenPushParam(params.Nth(i));
-    }
-
     Location *rvalue;
+    int thisptrbytes = 0;
+    LoadParams(cg);
+    if (isMethodCall()) {
+        Location *maybethis = cg->ThisPtr;
+        if (base) maybethis = base->GetMemLocation(cg);
+        Location *vtable = cg->GenLoad(maybethis, 0);
+        int offset = GetFnOffset();
+        Location *fn = cg->GenLoad(vtable, offset * CodeGenerator::VarSize);
+        PushParams(cg);
+        cg->GenPushParam(maybethis);
+        rvalue = cg->GenACall(fn, true);
+        thisptrbytes += 1;
+    } else {
+        PushParams(cg);
+        rvalue = cg->GenLCall(field->getName(), true);
+    }
+/*
     if (base == NULL) {
         if (env->IsInClassScope()) {
             ClassDecl *cdecl = GetClassFromImplicitThis();
             int offset = cdecl->GetFnOffset(field->getName());
             if (offset == -1) {
                 // global func
-                cg->GenLCall(field->getName(), false);    
+                rvalue = cg->GenLCall(field->getName(), true);    
             } else {
 
                 // else, member function, so push thisptr
@@ -742,6 +792,7 @@ Location *Call::GetMemLocation(CodeGenerator *cg) {
                 int offset = cdecl->GetFnOffset(GetFieldName());
                 Location *fn = cg->GenLoad(vtable, offset *CodeGenerator::VarSize);
                 rvalue = cg->GenACall(fn, true);
+                thisptrbytes = 1;
             }
 
         } else {
@@ -757,9 +808,10 @@ Location *Call::GetMemLocation(CodeGenerator *cg) {
         Location *fn = cg->GenLoad(vtable, offset*CodeGenerator::VarSize);
         cg->GenPushParam(thisptr);
         rvalue = cg->GenACall(fn, true);
+        thisptrbytes = 1;
     }
-
-    cg->GenPopParams(actuals->NumElements() * CodeGenerator::VarSize);
+*/
+    cg->GenPopParams((thisptrbytes + actuals->NumElements()) * CodeGenerator::VarSize);
 
 
     return rvalue;
@@ -769,16 +821,35 @@ Location *Call::GetMemLocation(CodeGenerator *cg) {
 
 int Call::Emit(CodeGenerator *cg) {
 
-    // push params
+/*
     List<Location*> params;
     for (int i = 0; i < actuals->NumElements(); i++) {
         params.Append(actuals->Nth(i)->GetMemLocation(cg));
     }
     for (int i = actuals->NumElements()-1; i >= 0; i--) {
         cg->GenPushParam(params.Nth(i));
+    } 
+*/
+
+    Location *rvalue;
+    int thisptrbytes = 0;
+    LoadParams(cg);
+    if (isMethodCall()) {
+        Location *maybethis = cg->ThisPtr;
+        if (base) maybethis = base->GetMemLocation(cg);
+        Location *vtable = cg->GenLoad(maybethis, 0);
+        int offset = GetFnOffset();
+        Location *fn = cg->GenLoad(vtable, offset * CodeGenerator::VarSize);
+        PushParams(cg);
+        cg->GenPushParam(maybethis);
+        rvalue = cg->GenACall(fn, false);
+        thisptrbytes += 1;
+    } else {
+        PushParams(cg);
+        rvalue = cg->GenLCall(field->getName(), false);
     }
-
-
+/*
+    int thisptrbytes = 0;
 
     if (base == NULL) {
         if (env->IsInClassScope()) {
@@ -796,6 +867,8 @@ int Call::Emit(CodeGenerator *cg) {
                 int offset = cdecl->GetFnOffset(GetFieldName());
                 Location *fn = cg->GenLoad(vtable, offset *CodeGenerator::VarSize);
                 cg->GenACall(fn, false);
+                thisptrbytes = 1;
+                
             }
 
         } else {
@@ -811,10 +884,10 @@ int Call::Emit(CodeGenerator *cg) {
         Location *fn = cg->GenLoad(vtable, offset*CodeGenerator::VarSize);
         cg->GenPushParam(thisptr);
         cg->GenACall(fn, false);
-        cg->GenPopParams(CodeGenerator::VarSize);
+        thisptrbytes = 1;
     }
-
-    cg->GenPopParams(actuals->NumElements() * CodeGenerator::VarSize);
+*/
+    cg->GenPopParams((thisptrbytes + actuals->NumElements()) * CodeGenerator::VarSize);
 }
 
 Location *ReadIntegerExpr::GetMemLocation(CodeGenerator *cg) {
@@ -827,4 +900,26 @@ Location *ReadLineExpr::GetMemLocation(CodeGenerator *cg) {
 
 Location *This::GetMemLocation(CodeGenerator *cg) {
      return cg->ThisPtr;
+}
+
+int AssignExpr::Emit(CodeGenerator *cg) {
+
+    Location *r = right->GetMemLocation(cg);
+
+    if (dynamic_cast<ArrayAccess*>(left) != NULL) {
+        ArrayAccess *arr = dynamic_cast<ArrayAccess*>(left);
+        Location *l = arr->GetPtrLocation(cg);
+        cg->GenStore(l, r);
+    } else if (dynamic_cast<FieldAccess*>(left)->IsMemberVariable()) {
+        FieldAccess *member = dynamic_cast<FieldAccess*>(left);
+        int offset = member->GetOffset()*4;
+        Location *var = member->GetPtrLocation(cg);
+        cg->GenStore(var, r, offset);
+    }
+    else {
+        Location *l = left->GetMemLocation(cg);
+        cg->GenAssign(l, r);
+    }
+
+    return 0;
 }

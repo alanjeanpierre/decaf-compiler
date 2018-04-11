@@ -54,6 +54,12 @@ int VarDecl::Emit(CodeGenerator *cg) {
     return 0; // don't emit for var decls?
 }
 
+int VarDecl::EmitClass(CodeGenerator *cg) {
+    //ClassDecl *pclass = dynamic_cast<ClassDecl*>(parent);
+    //int offset = pclass->GetVarOffset((char*)getName());
+    //memlocation = new Location(fpRelative, offset*cg->VarSize, getName());
+}
+
 
 ClassDecl::ClassDecl(Identifier *n, NamedType *ex, List<NamedType*> *imp, List<Decl*> *m) : Decl(n) {
     // extends can be NULL, impl & mem may be empty lists but cannot be NULL
@@ -352,6 +358,7 @@ int FnDecl::EmitClass(CodeGenerator *cg) {
 
     cg->GenLabel(this->GetVTableID());
     BeginFunc* b = cg->GenBeginFunc();
+    cg->SetStackPtr();
     int space = body->Emit(cg);
     cg->GenEndFunc();
 

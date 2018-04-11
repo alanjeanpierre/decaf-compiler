@@ -71,6 +71,7 @@ class VarDecl : public Decl
     Type *GetType() { return shadowtype; }
 
     int Emit(CodeGenerator *cg);
+    int EmitClass(CodeGenerator *cg);
 };
 
 class ClassDecl : public Decl 

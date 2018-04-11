@@ -240,8 +240,10 @@ class FieldAccess : public LValue
     Type *CheckType(EnvVector *env);
     char *GetFieldName() { return field->getName(); }
     Location *GetMemLocation(CodeGenerator *cg);
+    Location *GetPtrLocation(CodeGenerator *cg);
     int GetOffset() { return GetClassFromImplicitThis()->GetVarOffset(GetFieldName()); }
     bool IsMemberVariable();
+    int NScopesToParentFunc();
 };
 
 /* Like field access, call is used both for qualified base.field()
@@ -256,6 +258,7 @@ class Call : public Expr
     List<Expr*> *actuals;
     ClassDecl * GetClassFromImplicitThis();
     bool isArrLength();
+    List<Location*> *params;
     
   public:
     Call(yyltype loc, Expr *base, Identifier *field, List<Expr*> *args);
@@ -265,7 +268,11 @@ class Call : public Expr
     Expr *GetBase() { return base; }
     char *GetFieldName() { return field->getName(); }
     Location *GetMemLocation(CodeGenerator *cg);
+    void PushParams(CodeGenerator *cg);
     int Emit(CodeGenerator *cg);
+    int GetFnOffset();
+    bool isMethodCall();
+    void LoadParams(CodeGenerator *cg);
 };
 
 class NewExpr : public Expr
