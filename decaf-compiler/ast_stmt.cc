@@ -104,9 +104,9 @@ int StmtBlock::Emit(CodeGenerator *cg) {
 
     int space = decls->NumElements();
     for (int i = 0; i < decls->NumElements(); i++) {
-        int offset = CodeGenerator::OffsetToFirstLocal - i*4 - cg->GetStackSize();
-        decls->Nth(i)->SetMemLocation(fpRelative, offset);
         cg->AddStackVar();
+        int offset = CodeGenerator::OffsetToFirstLocal - cg->GetStackSize();
+        decls->Nth(i)->SetMemLocation(fpRelative, offset);
     }
 
     for (int i = 0; i < stmts->NumElements(); i++) {
