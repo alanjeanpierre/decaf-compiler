@@ -172,22 +172,65 @@ void ClassDecl::CheckInheritance() {
     // add class to type hierarchy
     Type::hierarchy->AddClassInheritance(extends, this->GetType(), implements);
 
+    int i = 0;
     if (extends) {
+        // copy parent class functions to this methodlabels
         for (int i = 0; i < baseClass->methodLabels->NumElements(); i++) {
+            methodLabels->Append(baseClass->methodLabels->Nth(i));
+        }
+
+        // search through and replace with updated methods
+        // append if not
+        int n = methodLabels->NumElements();
+        for (int i = 0; i < funcs->NumElements(); i++) {    
+            const char *c = funcs->Nth(i)->getName();
+            bool overridden = false;
+            int j = 0;
+            for (; j < n; j++) {
+                std::string s = methodLabels->Nth(j);
+                const char *c2 = s.c_str() + s.find('.') + 1;
+                if (strcmp(c, c2) == 0) {
+                    overridden = true;
+                    break;
+                }
+            }
+
+            if (overridden) {
+                methodLabels->RemoveAt(j);
+                methodLabels->InsertAt(funcs->Nth(i)->GetVTableID(), j);
+            } else {
+                methodLabels->Append(funcs->Nth(i)->GetVTableID());
+            }
+        }
+    } else {
+        for (int i = 0; i < funcs->NumElements(); i++) {
+            methodLabels->Append(funcs->Nth(i)->GetVTableID());
+        }
+        
+    }
+        /*
+        for (; i < baseClass->methodLabels->NumElements(); i++) {
             std::string s = baseClass->methodLabels->Nth(i);
             const char *c = s.c_str() + s.find('.') + 1;
             bool overridden = false;
+            FnDecl *derivedfn = NULL;
             for (int j = 0; j < funcs->NumElements(); j++) {
-                overridden |= (strcmp(funcs->Nth(j)->getName(), c) == 0);
+                if (strcmp(funcs->Nth(j)->getName(), c) == 0) {
+                    overridden = true;
+                    derivedfn = funcs->Nth(j);
+                    break;
+                }
             }
             if (!overridden) 
                 methodLabels->Append(baseClass->methodLabels->Nth(i));
+            else 
+                methodLabels->Append(derivedfn->GetVTableID());
         }
     }
 
-    for (int i = 0; i < funcs->NumElements(); i++) {
+    for (; i < funcs->NumElements(); i++) {
         methodLabels->Append(funcs->Nth(i)->GetVTableID());
-    }
+    } */
 }
 
 void ClassDecl::CheckFunctions() {
