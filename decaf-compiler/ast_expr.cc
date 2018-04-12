@@ -226,7 +226,7 @@ Location *LogicalExpr::GetMemLocation(CodeGenerator *cg) {
     Location *r = right->GetMemLocation(cg);
     if (left == NULL) {// negation {
         Location *l = cg->GenLoadConstant(0);
-        cg->GenBinaryOp("&&", l, r);
+        cg->GenBinaryOp("==", l, r);
     } else {
         Location *l = left->GetMemLocation(cg);
         return cg->GenBinaryOp(op->GetOp(), l, r);
