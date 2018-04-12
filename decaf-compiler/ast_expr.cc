@@ -140,6 +140,7 @@ Location *RelationalExpr::GetMemLocation(CodeGenerator *cg) {
 
     Location *l = left->GetMemLocation(cg);
     Location *r = right->GetMemLocation(cg);
+    
     if (strcmp(op->GetOp(), "<=") == 0) {
         Location *lt = cg->GenBinaryOp("<", l, r);
         Location *eq = cg->GenBinaryOp("==", l, r);
@@ -595,7 +596,9 @@ Location *ArrayAccess::GetPtrLocation(CodeGenerator *cg) {
     cg->GenBuiltInCall(PrintString, out);
     */
     // oob tests
-    char *notoob = cg->NewLabel();
+    
+
+      char *notoob = cg->NewLabel();
     Location *zero = cg->GenLoadConstant(0);
     Location *negindex = cg->GenBinaryOp("<", index, zero);
     Location *arrsize = cg->GenLoad(arraddr, -CodeGenerator::VarSize);
@@ -646,14 +649,23 @@ bool FieldAccess::IsMemberVariable() {
 
 int FieldAccess::NScopesToParentFunc() {
     Node *p = this;
+    FnDecl *d;
     int i = 0;
     while (p) {
-        if (dynamic_cast<FnDecl*>(p)) 
+        if (d = dynamic_cast<FnDecl*>(p)) 
             break;
-        i++;
         p = p->GetParent();
     }
-    return i-1;
+
+    EnvVector *fnenv = d->GetEnv();
+    EnvVector *nth = env;
+    while (nth) {
+        if (nth == fnenv) 
+            break;
+        i++;
+        nth = nth->Pop();
+    }
+    return i;
 }
 
 Location *FieldAccess::GetPtrLocation(CodeGenerator *cg) {
@@ -676,7 +688,7 @@ Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
     if (base == NULL) {
         Decl *d = env->Search(field->getName());
         int n = NScopesToParentFunc();
-        Decl *d2 = env->SearchN(d, n);
+        Decl *d2 = env->SearchN(field->getName(), n+1);
         if (env->IsInClassScope() && d2 == NULL) {
                 ClassDecl *cdecl = GetClassFromImplicitThis();
                 int offset = cdecl->GetVarOffset(GetFieldName());

@@ -27,6 +27,7 @@ class EnvVector {
         Decl* Search(const char* id);
         Decl* SearchInScope(Decl* id);
         Decl* SearchN(Decl* id, int n);
+        Decl* SearchN(const char* id, int n);
         bool InScope(Decl* id);
         void Insert(Decl* id);
         bool InsertIfNotExists(Decl* id);

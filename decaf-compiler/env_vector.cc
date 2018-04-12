@@ -35,11 +35,15 @@ Decl* EnvVector::SearchInScope(Decl* id) {
 }
 
 Decl* EnvVector::SearchN(Decl* id, int n) {
+    return SearchN(id->getName(), n);
+}
+
+Decl *EnvVector::SearchN(const char* id, int n) {
     EnvVector *h = this;
     Decl* s;
     for (int i = 0; i < n && h; i++) {
 
-        s = h->env->Lookup(id->getName());
+        s = h->env->Lookup(id);
         if(s)
             return s;
         h = h->parent;
@@ -60,17 +64,17 @@ Decl* EnvVector::Search(Decl* id) {
 }
 
 
-    Decl* EnvVector::Search(const char* id) {
-        EnvVector *h = this;
-        Decl *s;
-        while(h) {
-            s = h->env->Lookup(id);
-            if(s)
-                return s;
-            h = h->parent;
-        }
-        return NULL;
+Decl* EnvVector::Search(const char* id) {
+    EnvVector *h = this;
+    Decl *s;
+    while(h) {
+        s = h->env->Lookup(id);
+        if(s)
+            return s;
+        h = h->parent;
     }
+    return NULL;
+}
 
 bool EnvVector::InScope(Decl* id) {
     return env->Lookup(id->getName()) != NULL;
