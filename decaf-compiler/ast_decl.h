@@ -23,6 +23,8 @@ class NamedType;
 class Identifier;
 class Stmt;
 
+class FnDecl;
+
 class Decl : public Node 
 {
   protected:
@@ -81,6 +83,9 @@ class ClassDecl : public Decl
     EnvVector *inheritanceVector;
     int ndecls;
     List<const char*> *methodLabels;
+    List<VarDecl*> *variables;
+    List<FnDecl*> *funcs;
+    ClassDecl *baseClass;
 
   protected:
     List<Decl*> *members;

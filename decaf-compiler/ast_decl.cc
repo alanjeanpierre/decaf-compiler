@@ -69,6 +69,8 @@ ClassDecl::ClassDecl(Identifier *n, NamedType *ex, List<NamedType*> *imp, List<D
     (implements=imp)->SetParentAll(this);
     (members=m)->SetParentAll(this);
     checked = false;
+    variables = new List<VarDecl*>();
+    funcs = new List<FnDecl*>();
 }
 
 void ClassDecl::CheckExtends() {
@@ -82,9 +84,11 @@ void ClassDecl::CheckExtends() {
     }
     
     ClassDecl *e = dynamic_cast<ClassDecl*>(env->Search(extends->getName()));
+    baseClass = e;
     if (e == NULL) {
         return;
     }
+    
         
     e->CheckInheritance();
     EnvVector *parentScope = e->GetEnv();
@@ -110,6 +114,10 @@ void ClassDecl::CheckExtends() {
             ReportError::DeclConflict(n, d);
         }
     } 
+
+    for (int i = baseClass->variables->NumElements()-1; i>=0; i--) {
+        variables->InsertAt(baseClass->variables->Nth(i), 0);
+    }
 }
 
 void ClassDecl::BuildInterface() {
@@ -142,9 +150,12 @@ void ClassDecl::CheckInheritance() {
         env->InsertIfNotExists(n);
         n->SetEnv(env);
         if (FnDecl* var = dynamic_cast<FnDecl*>(members->Nth(i))) {
+            funcs->Append(var);
             std::string *s = new std::string(var->getName());
             s->insert(0, (std::string("_") + std::string(getName()) + std::string(".")).c_str());
             var->SetVTableID(s->c_str());
+        } else if (VarDecl *var = dynamic_cast<VarDecl*>(members->Nth(i))) {
+            variables->Append(var);
         }
         //n->Check();
     }
@@ -166,12 +177,22 @@ void ClassDecl::CheckFunctions() {
     methodLabels = new List<const char*>();
     for (int i = 0; i < members->NumElements(); i++) {
         members->Nth(i)->Check();
-        if (VarDecl* var = dynamic_cast<VarDecl*>(members->Nth(i))) {
-            ndecls++;
+    }
+    ndecls = variables->NumElements();
+
+    if (extends) {
+        for (int i = 0; i < baseClass->methodLabels->NumElements(); i++) {
+            bool overidden = false;
+            for (int j = 0; j < funcs->NumElements(); j++) {
+                overidden |= baseClass->GetFnOffset((char*)funcs->Nth(j)->getName()) != -1;
+            }
+            if (!overidden)
+                methodLabels->Append(baseClass->methodLabels->Nth(i));
         }
-        if (FnDecl* var = dynamic_cast<FnDecl*>(members->Nth(i))) {
-            methodLabels->Append(var->GetVTableID());
-        }
+    }
+
+    for (int i = 0; i < funcs->NumElements(); i++) {
+        methodLabels->Append(funcs->Nth(i)->GetVTableID());
     }
     
 }
@@ -370,13 +391,13 @@ int FnDecl::EmitClass(CodeGenerator *cg) {
 
 int ClassDecl::GetVarOffset(char *fieldname) {
     int offset = 1;
-    for (int i = 0; i < members->NumElements(); i++) {
-        if (VarDecl *v = dynamic_cast<VarDecl*>(members->Nth(i))) {
-            if (strcmp(v->getName(), fieldname) == 0) {
-                return offset;
-            }
-            offset++;
+    for (int i = 0; i < variables->NumElements(); i++) {
+        VarDecl *v = variables->Nth(i);
+        if (strcmp(v->getName(), fieldname) == 0) {
+            return offset;
         }
+        offset++;
+        
     }
 
     return -1;
@@ -384,14 +405,17 @@ int ClassDecl::GetVarOffset(char *fieldname) {
 
 int ClassDecl::GetFnOffset(char *fieldname) {
     int offset = 0;
-    int stroffset = strlen(getName()) + 2;
-    for (int i = 0; i < members->NumElements(); i++) {
-        if (FnDecl *v = dynamic_cast<FnDecl*>(members->Nth(i))) {
-            if (strcmp(v->GetVTableID() + stroffset, fieldname) == 0) {
-                return offset;
-            }
-            offset++;
+    int stroffset = 0;
+    for (int i = 0; i < methodLabels->NumElements(); i++) {
+        const char *v = methodLabels->Nth(i);
+        string s = std::string(v);
+        stroffset = s.find('.') + 1;
+        //std::cerr << "comparing " << s << " (" << v->GetVTableID() + stroffset << " ) with " << fieldname << std::endl;
+        if (strcmp(v + stroffset, fieldname) == 0) {
+            return offset;
         }
+        offset++;
+    
     }
 
     return -1;
