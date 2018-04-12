@@ -41,7 +41,6 @@ void Program::Check() {
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->CheckInheritance();
     }
-    
     // check implements
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->CheckImplements();
@@ -51,6 +50,7 @@ void Program::Check() {
     for (int i = 0; i < decls->NumElements(); i++) {
         decls->Nth(i)->CheckFunctions();
     }
+
 }
 
 void Program::Emit() {

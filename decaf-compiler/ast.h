@@ -34,6 +34,9 @@
 //#include "env_vector.h"
 #include <iostream>
 
+
+#define nullcheck(l) (( l == NULL) ? "Null" : "Non null")
+
 class CodeGenerator;
 class EnvVector;
 

@@ -71,6 +71,7 @@ ClassDecl::ClassDecl(Identifier *n, NamedType *ex, List<NamedType*> *imp, List<D
     checked = false;
     variables = new List<VarDecl*>();
     funcs = new List<FnDecl*>();
+    methodLabels = new List<const char*>();
 }
 
 void ClassDecl::CheckExtends() {
@@ -163,30 +164,23 @@ void ClassDecl::CheckInheritance() {
     // build extends symbol table 
     // ONLY NEED DIRECT PARENTS SYMBOL TABLE
     CheckExtends();
+
     
     // build interface methods
     BuildInterface();
 
     // add class to type hierarchy
     Type::hierarchy->AddClassInheritance(extends, this->GetType(), implements);
-}
-
-void ClassDecl::CheckFunctions() {
-
-    ndecls = 0;
-    methodLabels = new List<const char*>();
-    for (int i = 0; i < members->NumElements(); i++) {
-        members->Nth(i)->Check();
-    }
-    ndecls = variables->NumElements();
 
     if (extends) {
         for (int i = 0; i < baseClass->methodLabels->NumElements(); i++) {
-            bool overidden = false;
+            std::string s = baseClass->methodLabels->Nth(i);
+            const char *c = s.c_str() + s.find('.') + 1;
+            bool overridden = false;
             for (int j = 0; j < funcs->NumElements(); j++) {
-                overidden |= baseClass->GetFnOffset((char*)funcs->Nth(j)->getName()) != -1;
+                overridden |= (strcmp(funcs->Nth(j)->getName(), c) == 0);
             }
-            if (!overidden)
+            if (!overridden) 
                 methodLabels->Append(baseClass->methodLabels->Nth(i));
         }
     }
@@ -194,7 +188,17 @@ void ClassDecl::CheckFunctions() {
     for (int i = 0; i < funcs->NumElements(); i++) {
         methodLabels->Append(funcs->Nth(i)->GetVTableID());
     }
-    
+}
+
+void ClassDecl::CheckFunctions() {
+
+    ndecls = 0;
+    for (int i = 0; i < members->NumElements(); i++) {
+        members->Nth(i)->Check();
+    }
+    ndecls = variables->NumElements();
+
+
 }
 
 void ClassDecl::CheckImplements() {
@@ -410,7 +414,7 @@ int ClassDecl::GetFnOffset(char *fieldname) {
         const char *v = methodLabels->Nth(i);
         string s = std::string(v);
         stroffset = s.find('.') + 1;
-        //std::cerr << "comparing " << s << " (" << v->GetVTableID() + stroffset << " ) with " << fieldname << std::endl;
+        //std::cerr << "comparing " << s << " (" << v + stroffset << ") with " << fieldname << std::endl;
         if (strcmp(v + stroffset, fieldname) == 0) {
             return offset;
         }

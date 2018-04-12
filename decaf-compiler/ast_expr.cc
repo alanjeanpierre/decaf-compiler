@@ -12,6 +12,7 @@
 
 
 
+
 IntConstant::IntConstant(yyltype loc, int val) : Expr(loc) {
     value = val;
 }
@@ -600,8 +601,8 @@ Location *ArrayAccess::GetPtrLocation(CodeGenerator *cg) {
     */
     // oob tests
     
-
-      char *notoob = cg->NewLabel();
+    //std::cerr << "l: " << nullcheck(arraddr) << " r: " << nullcheck(index) << std::endl;
+    char *notoob = cg->NewLabel();
     Location *zero = cg->GenLoadConstant(0);
     Location *negindex = cg->GenBinaryOp("<", index, zero);
     Location *arrsize = cg->GenLoad(arraddr, -CodeGenerator::VarSize);
