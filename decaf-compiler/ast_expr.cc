@@ -32,6 +32,9 @@ Location *BoolConstant::GetMemLocation(CodeGenerator *cg) {
     return cg->GenLoadConstant(GetVal());
 }
 
+Location *NullConstant::GetMemLocation(CodeGenerator *cg) {
+    return cg->GenLoadConstant(0);
+}
 
 StringConstant::StringConstant(yyltype loc, const char *val) : Expr(loc) {
     Assert(val != NULL);

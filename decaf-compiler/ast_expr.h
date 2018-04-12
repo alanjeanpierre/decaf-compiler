@@ -109,6 +109,7 @@ class NullConstant: public Expr
     void Check(EnvVector *env) {;}
     void Check() {;}
     Type *CheckType(EnvVector *env) { resolvedType = Type::nullType; return Type::nullType; }
+    Location *GetMemLocation(CodeGenerator *cg);
 };
 
 class Operator : public Node 
