@@ -689,6 +689,7 @@ Location *FieldAccess::GetPtrLocation(CodeGenerator *cg) {
 
 Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
 
+
     if (base == NULL) {
         Decl *d = env->Search(field->getName());
         int n = NScopesToParentFunc();
@@ -696,6 +697,7 @@ Location *FieldAccess::GetMemLocation(CodeGenerator *cg) {
         if (env->IsInClassScope() && d2 == NULL) {
                 ClassDecl *cdecl = GetClassFromImplicitThis();
                 int offset = cdecl->GetVarOffset(GetFieldName());
+                if (offset == -1) return d->GetMemLocation(cg);
                 Location *memloc = cg->GenLoad(CodeGenerator::ThisPtr, offset * CodeGenerator::VarSize);
                 return memloc;
         } else {

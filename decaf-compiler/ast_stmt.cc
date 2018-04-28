@@ -56,8 +56,11 @@ void Program::Check() {
 void Program::Emit() {
     CodeGenerator *cg = new CodeGenerator();
     bool foundMain = false;
+    int offset = 0;
     for (int i = 0; i < decls->NumElements(); i++) {
-        decls->Nth(i)->SetMemLocation(gpRelative, i*4);
+        if (dynamic_cast<VarDecl*>(decls->Nth(i))) {
+            decls->Nth(i)->SetMemLocation(gpRelative, offset++*4);
+        }
         foundMain |= (strcmp(decls->Nth(i)->getName(), "main") == 0);
     }
 
