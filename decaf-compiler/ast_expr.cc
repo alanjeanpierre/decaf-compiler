@@ -226,7 +226,7 @@ Location *LogicalExpr::GetMemLocation(CodeGenerator *cg) {
     Location *r = right->GetMemLocation(cg);
     if (left == NULL) {// negation {
         Location *l = cg->GenLoadConstant(0);
-        cg->GenBinaryOp("==", l, r);
+        return cg->GenBinaryOp("==", l, r);
     } else {
         Location *l = left->GetMemLocation(cg);
         return cg->GenBinaryOp(op->GetOp(), l, r);
@@ -656,7 +656,7 @@ int FieldAccess::NScopesToParentFunc() {
     FnDecl *d;
     int i = 0;
     while (p) {
-        if (d = dynamic_cast<FnDecl*>(p)) 
+        if ((d = dynamic_cast<FnDecl*>(p))) 
             break;
         p = p->GetParent();
     }
@@ -906,6 +906,7 @@ int Call::Emit(CodeGenerator *cg) {
     }
 */
     cg->GenPopParams((thisptrbytes + actuals->NumElements()) * CodeGenerator::VarSize);
+    return 0;
 }
 
 Location *ReadIntegerExpr::GetMemLocation(CodeGenerator *cg) {

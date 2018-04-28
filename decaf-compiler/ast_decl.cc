@@ -58,6 +58,7 @@ int VarDecl::EmitClass(CodeGenerator *cg) {
     //ClassDecl *pclass = dynamic_cast<ClassDecl*>(parent);
     //int offset = pclass->GetVarOffset((char*)getName());
     //memlocation = new Location(fpRelative, offset*cg->VarSize, getName());
+    return 0;
 }
 
 

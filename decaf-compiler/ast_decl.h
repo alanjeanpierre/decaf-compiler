@@ -47,7 +47,7 @@ class Decl : public Node
 
     void SetMemLocation(Segment s, int offset);
     Location *GetMemLocation(CodeGenerator *cg) { return memlocation; }
-    virtual int EmitClass(CodeGenerator *cg) {;}
+    virtual int EmitClass(CodeGenerator *cg) { return 0; }
     void SetID(char *s) { id->setName(s); }
 };
 
@@ -132,7 +132,7 @@ class InterfaceDecl : public Decl
     Type *GetType();
 
 
-    int Emit(CodeGenerator *cg) {;}
+    int Emit(CodeGenerator *cg) { return 0;}
 };
 
 class FnDecl : public Decl 

@@ -238,6 +238,7 @@ int PrintStmt::Emit(CodeGenerator *cg) {
                 ;
         }
     }
+    return 0;
 }
 
 
@@ -257,6 +258,7 @@ int ReturnStmt::Emit(CodeGenerator *cg) {
 
     Location *rval = expr->GetMemLocation(cg);
     cg->GenReturn(rval);
+    return 0;
 }
 
 int ForStmt::Emit(CodeGenerator *cg) {
@@ -284,6 +286,7 @@ int WhileStmt::Emit(CodeGenerator *cg) {
     body->Emit(cg);
     cg->GenGoto(start);
     cg->GenLabel(end);
+    return 0;
 }
 
 int IfStmt::Emit(CodeGenerator *cg) {
@@ -300,6 +303,7 @@ int IfStmt::Emit(CodeGenerator *cg) {
         elseBody->Emit(cg);
     }
     cg->GenLabel(post);
+    return 0;
 }
 
 int BreakStmt::Emit(CodeGenerator *cg) {
@@ -314,5 +318,6 @@ int BreakStmt::Emit(CodeGenerator *cg) {
     }
 
     cg->GenGoto(endlbl);
+    return 0;
 }
 

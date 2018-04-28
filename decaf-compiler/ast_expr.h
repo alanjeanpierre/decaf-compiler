@@ -32,7 +32,7 @@ class Expr : public Stmt
     Expr() : Stmt() {}
     virtual Type *CheckType(EnvVector *env) { return NULL; }
     Type *GetResolvedType() { return resolvedType; }
-    virtual Location *GetMemLocation(CodeGenerator *cg) {;}
+    virtual Location *GetMemLocation(CodeGenerator *cg) { return NULL; }
 };
 
 /* This node type is used for those places where an expression is optional.
